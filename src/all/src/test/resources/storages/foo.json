@@ -1,0 +1,14 @@
+{
+  "id": "foo",
+  "source": {
+    "bucket": "bar",
+    "path": "baz/",
+    "access": "rw",
+    "properties": {
+
+    }
+  },
+  "partitioner": {
+    "granularity": "HOUR"
+  }
+}

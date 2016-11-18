@@ -1,0 +1,18 @@
+{
+  "id": "bar",
+  "source": {
+    "dataSource": "bar",
+    "coordinator": "${AWS_DEFAULT_REGION}",
+    "overlord": "${AWS_DEFAULT_REGION}",
+    "broker": "${AWS_DEFAULT_REGION}",
+    "access": "rw",
+    "properties": {
+
+    }
+  },
+  "partitioner": {
+    "granularity": "HOUR",
+    "pathFormat": "yyyy/MM/dd/HH/mm/ss",
+    "pathPattern": "^.*(\\d{4})/(?:(\\d{2})/(?:(\\d{2})/(?:(\\d{2})/(?:(\\d{2})/(?:(\\d{2})/)?)?)?)?)?.*$"
+  }
+}
