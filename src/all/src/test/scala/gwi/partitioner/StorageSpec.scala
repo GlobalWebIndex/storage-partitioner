@@ -15,8 +15,10 @@ class StorageSpec extends FreeSpec with StorageCodec with Matchers with BeforeAn
   "storages should" - {
 
     "be configurable" in {
-      Config.load(List("foo", "bar"))
       Config.load[S3TimeStorage]("foo")
+      val druidStorage = Config.load[DruidTimeStorage]("bar")
+      assert(!druidStorage.toString.contains('$'))
+      Config.load(List("foo", "bar"))
     }
 
     "be serializable" in {

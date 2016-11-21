@@ -23,7 +23,7 @@ object Config extends StorageCodec {
     val expressions = "\\$\\{.+?\\}".r.findAllIn(content).map(Expression(_)).toList
     require(expressions.forall(_.value.isDefined), s"Please export variable ${expressions.find(_.value.isEmpty).get.variable}")
     expressions.foldLeft(content) { case (acc, Expression(exp,variable,Some(value))) =>
-      content.replace(exp, value)
+      acc.replace(exp, value)
     }
   }
 

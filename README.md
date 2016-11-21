@@ -1,7 +1,7 @@
 ## storage-partitioner
 
 ```
-"net.globalwebindex" %% "storage-partitioner" % "0.01-SNAPSHOT"
+"net.globalwebindex" %% "storage-partitioner" % "0.03-SNAPSHOT"
 ```
 
 Abstraction of storages with partitioned data, currently only time series data is supported and implementation is provided

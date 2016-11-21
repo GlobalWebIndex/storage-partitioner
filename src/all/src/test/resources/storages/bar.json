@@ -2,9 +2,9 @@
   "id": "bar",
   "source": {
     "dataSource": "bar",
-    "coordinator": "${AWS_DEFAULT_REGION}",
-    "overlord": "${AWS_DEFAULT_REGION}",
-    "broker": "${AWS_DEFAULT_REGION}",
+    "coordinator": "${USER}",
+    "overlord": "${LANGUAGE}",
+    "broker": "${SCALA_HOME}",
     "access": "rw",
     "properties": {
 

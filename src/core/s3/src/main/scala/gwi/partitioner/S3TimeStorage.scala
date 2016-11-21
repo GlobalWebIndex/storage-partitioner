@@ -95,7 +95,7 @@ case class S3Pointer(bucket: String, path: String, timePath: String) extends Poi
   def partitionFileKey(name: String): String = path + timePath + name
 }
 
-case class S3TimePartitioner(granularity: Granularity, pathFormat: Option[String], pathPattern: Option[String]) extends TimePartitioner {
+case class S3TimePartitioner(granularity: Granularity, private val pathFormat: Option[String], private val pathPattern: Option[String]) extends TimePartitioner {
   type OUT = S3Pointer
   type S = S3Source
   private[this] val pathFormatter = DateTimeFormat.forPattern(pathFormat.getOrElse(S3TimePartitioner.PlainPathFormat).split("/").take(granularity.arity).mkString("/"))
@@ -117,7 +117,7 @@ case class S3TimePartitioner(granularity: Granularity, pathFormat: Option[String
       }
   }
 
-  def getPathFormat: String = pathFormat.get.split("/").take(granularity.arity).mkString("/")
+  def getPathFormat: String = pathFormat.getOrElse(S3TimePartitioner.PlainPathFormat).split("/").take(granularity.arity).mkString("/")
 }
 
 object S3TimePartitioner {
