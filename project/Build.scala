@@ -23,9 +23,10 @@ object Build extends sbt.Build {
   )
 
   lazy val libraryDeps = Seq(
-    "joda-time" % "joda-time" % "2.9.4",
-    "org.joda" % "joda-convert" % "1.8",
-    "org.scalatest" %% "scalatest" % "3.0.0" % "test"
+    "joda-time"         % "joda-time"       % "2.9.4",
+    "org.joda"          % "joda-convert"    % "1.8",
+    "org.scalatest"     %% "scalatest"      % "3.0.0"   % "test",
+    "com.storm-enroute" %% "scalameter"     % "0.8.2"   % "test"
   )
 
   val publishSettings = Seq(
@@ -58,7 +59,7 @@ object Build extends sbt.Build {
 
   lazy val sharedSettings = Seq(
     organization := "net.globalwebindex",
-    version := "0.06-SNAPSHOT",
+    version := "0.08-SNAPSHOT",
     scalaVersion := "2.11.8",
     offline := true,
     scalacOptions ++= Seq(

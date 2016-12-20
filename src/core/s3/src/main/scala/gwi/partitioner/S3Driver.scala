@@ -1,7 +1,5 @@
 package gwi.partitioner
 
-import java.io.{BufferedReader, InputStream, InputStreamReader, StringWriter}
-import java.nio.charset.StandardCharsets
 import java.util
 import java.util.zip.GZIPInputStream
 
@@ -26,29 +24,22 @@ object S3Driver {
 
   implicit class Pimp(s3: AmazonS3Client) {
 
-    private def streamToString(is: InputStream, bufferSizeInBytes: Int): String =
-      try {
-        val reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8), bufferSizeInBytes)
-        val writer = new StringWriter(bufferSizeInBytes/2)
-        val buffer = new Array[Char](bufferSizeInBytes/2)
-        var length = reader.read(buffer)
-        while (length > 0) {
-          writer.write(buffer, 0, length)
-          length = reader.read(buffer)
-        }
-        writer.toString
-      } finally is.close()
-
     def readObjectStream[T](bucketName: String, key: String)(fn: (S3ObjectInputStream) => T): T = {
       val s3Obj = s3.getObject(bucketName, key)
       try fn(s3Obj.getObjectContent) finally Try(s3Obj.close())
     }
 
     def readObjectStreamAsString(bucketName: String, key: String, expectedSize: Int): String =
-      readObjectStream(bucketName, key)( is => streamToString(is, expectedSize))
+      readObjectStream(bucketName, key)( is => IO.streamToString(is, expectedSize))
 
     def readObjectGZipStreamAsString(bucketName: String, key: String, expectedSize: Int): String =
-      readObjectStream(bucketName, key)( is => streamToString(new GZIPInputStream(is, expectedSize/8), expectedSize))
+      readObjectStream(bucketName, key)( is => IO.streamToString(new GZIPInputStream(is), expectedSize))
+
+    def readObjectStreamLines(bucketName: String, key: String, expectedSize: Int): Array[String] =
+      readObjectStream(bucketName, key)( is => IO.streamToSeq(is, expectedSize))
+
+    def readObjectGZipStreamLines(bucketName: String, key: String, expectedSize: Int): Array[String] =
+      readObjectStream(bucketName, key)( is => IO.streamToSeq(new GZIPInputStream(is), expectedSize))
 
     def listKeys(bucketName: String, prefix: String): Vector[String] = {
       import scala.collection.JavaConverters._
