@@ -58,7 +58,7 @@ object Build extends sbt.Build {
 
   lazy val sharedSettings = Seq(
     organization := "net.globalwebindex",
-    version := "0.04-SNAPSHOT",
+    version := "0.06-SNAPSHOT",
     scalaVersion := "2.11.8",
     offline := true,
     scalacOptions ++= Seq(
@@ -89,7 +89,7 @@ object Build extends sbt.Build {
   lazy val s3 = (project in file("src/core/s3"))
     .settings(name := "s3-storage-partitioner")
     .settings(sharedSettings)
-    .settings(libraryDependencies ++= Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.15"))
+    .settings(libraryDependencies ++= Seq("com.amazonaws" % "aws-java-sdk-s3" % "1.11.68"))
     .dependsOn(api % "compile->compile;test->test")
 
   lazy val druid = (project in file("src/core/druid"))

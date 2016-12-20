@@ -1,6 +1,6 @@
 package gwi.partitioner
 
-import java.io.{InputStream, InputStreamReader, StringWriter}
+import java.io.{BufferedReader, InputStream, InputStreamReader, StringWriter}
 import java.nio.charset.StandardCharsets
 import java.util
 import java.util.zip.GZIPInputStream
@@ -26,11 +26,11 @@ object S3Driver {
 
   implicit class Pimp(s3: AmazonS3Client) {
 
-    private def streamToString(is: InputStream, expectedSize: Int): String =
+    private def streamToString(is: InputStream, bufferSizeInBytes: Int): String =
       try {
-        val reader = new InputStreamReader(is, StandardCharsets.UTF_8)
-        val writer = new StringWriter(expectedSize)
-        val buffer = new Array[Char](expectedSize)
+        val reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8), bufferSizeInBytes)
+        val writer = new StringWriter(bufferSizeInBytes/2)
+        val buffer = new Array[Char](bufferSizeInBytes/2)
         var length = reader.read(buffer)
         while (length > 0) {
           writer.write(buffer, 0, length)
