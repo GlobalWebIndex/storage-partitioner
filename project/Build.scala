@@ -58,7 +58,7 @@ object Build extends sbt.Build {
 
   lazy val sharedSettings = Seq(
     organization := "net.globalwebindex",
-    version := "0.03-SNAPSHOT",
+    version := "0.04-SNAPSHOT",
     scalaVersion := "2.11.8",
     offline := true,
     scalacOptions ++= Seq(
@@ -102,7 +102,7 @@ object Build extends sbt.Build {
     .settings(name := "storage-partitioner")
     .settings(sharedSettings)
     .settings(libraryDependencies ++= Seq(
-        "com.typesafe.akka" %% "akka-http-spray-json-experimental" % "2.4.11"
+        "io.spray" %% "spray-json" % "1.3.2"
       )
     ).dependsOn(s3 % "compile->compile;test->test", druid % "compile->compile;test->test")
 

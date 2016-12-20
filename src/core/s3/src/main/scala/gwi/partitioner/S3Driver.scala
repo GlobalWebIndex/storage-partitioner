@@ -5,11 +5,11 @@ import java.nio.charset.StandardCharsets
 import java.util
 import java.util.zip.GZIPInputStream
 
-import com.amazonaws.{ClientConfiguration, ClientConfigurationFactory}
 import com.amazonaws.auth.{AWSCredentials, BasicAWSCredentials}
 import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.{ListObjectsRequest, ObjectListing, S3ObjectInputStream}
+import com.amazonaws.{ClientConfiguration, ClientConfigurationFactory}
 
 import scala.annotation.tailrec
 import scala.collection.mutable.Builder
@@ -26,30 +26,29 @@ object S3Driver {
 
   implicit class Pimp(s3: AmazonS3Client) {
 
+    private def streamToString(is: InputStream, expectedSize: Int): String =
+      try {
+        val reader = new InputStreamReader(is, StandardCharsets.UTF_8)
+        val writer = new StringWriter(expectedSize)
+        val buffer = new Array[Char](expectedSize)
+        var length = reader.read(buffer)
+        while (length > 0) {
+          writer.write(buffer, 0, length)
+          length = reader.read(buffer)
+        }
+        writer.toString
+      } finally is.close()
+
     def readObjectStream[T](bucketName: String, key: String)(fn: (S3ObjectInputStream) => T): T = {
       val s3Obj = s3.getObject(bucketName, key)
       try fn(s3Obj.getObjectContent) finally Try(s3Obj.close())
     }
 
-    def getObjectGunzipped(bucketName: String, key: String, expectedSize: Int): String = {
-      def streamToString(is: InputStream): String =
-        try {
-          val reader = new InputStreamReader(is, StandardCharsets.UTF_8)
-          val writer = new StringWriter(expectedSize)
-          val buffer = new Array[Char](expectedSize)
-          var length = reader.read(buffer)
-          while (length > 0) {
-            writer.write(buffer, 0, length)
-            length = reader.read(buffer)
-          }
-          writer.toString
-        } finally is.close()
+    def readObjectStreamAsString(bucketName: String, key: String, expectedSize: Int): String =
+      readObjectStream(bucketName, key)( is => streamToString(is, expectedSize))
 
-      def gunzipStreamToString(inputStream: InputStream): String =
-        streamToString(new GZIPInputStream(inputStream, expectedSize/8))
-
-      readObjectStream(bucketName, key)(gunzipStreamToString)
-    }
+    def readObjectGZipStreamAsString(bucketName: String, key: String, expectedSize: Int): String =
+      readObjectStream(bucketName, key)( is => streamToString(new GZIPInputStream(is, expectedSize/8), expectedSize))
 
     def listKeys(bucketName: String, prefix: String): Vector[String] = {
       import scala.collection.JavaConverters._
@@ -64,7 +63,6 @@ object S3Driver {
       }
       recursively(s3.listObjects(bucketName, prefix), Vector.newBuilder[String]).result()
     }
-
 
     def commonPrefixSource(bucket: String, prefix: String, delimiter: String, expectedSize: Int): Seq[String] = {
       @tailrec
