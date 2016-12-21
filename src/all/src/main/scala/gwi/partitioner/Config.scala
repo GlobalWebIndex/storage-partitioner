@@ -1,7 +1,5 @@
 package gwi.partitioner
 
-import scala.io.Source
-
 case class Expression(exp: String, variable: String, value: Option[String])
 object Expression {
   def apply(expression: String): Expression = {
@@ -18,7 +16,7 @@ object Config extends StorageCodec {
   import spray.json._
 
   private def storagePath(name: String) = s"storages/$name.json"
-  private def storageLines(path: String) = Source.fromInputStream(getClass.getClassLoader.getResourceAsStream(path)).getLines()
+  private def storageLines(path: String) = IO.streamToSeq(getClass.getClassLoader.getResourceAsStream(path), 8192)
   private def extrapolate(content: String): String = {
     val expressions = "\\$\\{.+?\\}".r.findAllIn(content).map(Expression(_)).toList
     require(expressions.forall(_.value.isDefined), s"Please export variable ${expressions.find(_.value.isEmpty).get.variable}")
