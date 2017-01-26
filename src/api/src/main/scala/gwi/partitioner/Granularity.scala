@@ -3,6 +3,12 @@ package gwi.partitioner
 import org.joda.time.chrono.ISOChronology
 import org.joda.time.{Days, _}
 
+/**
+  * @note this code is based on Druid's https://github.com/metamx/java-util/blob/master/src/main/java/com/metamx/common/Granularity.java
+  *       I wanted to use it directly but I had to :
+  *        - make several modifications because this library is not about Druid, but it is more general
+  *        - transitive dependencies on classpath would make troubles to users
+  */
 trait Granularity {
 
   override def toString: String = getClass.getSimpleName.stripSuffix("$")
