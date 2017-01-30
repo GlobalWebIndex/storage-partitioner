@@ -3,7 +3,11 @@
 [![Build Status](https://travis-ci.org/GlobalWebIndex/storage-partitioner.svg?branch=master)](https://travis-ci.org/GlobalWebIndex/storage-partitioner)
 
 ```
-"net.globalwebindex" %% "storage-partitioner" % "0.09-SNAPSHOT"
+"net.globalwebindex" %% "storage-partitioner" % "x.y.z"
+```
+or
+```
+dependsOn(ProjectRef(uri("https://github.com/GlobalWebIndex/storage-partitioner.git#vx.y.x"), "all"))
 ```
 
 Abstraction of storages with partitioned data, currently only time series data is supported and implementation is provided
