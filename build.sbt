@@ -6,9 +6,9 @@ organization in ThisBuild := "net.globalwebindex"
 libraryDependencies in ThisBuild ++= jodaTime ++ testingDeps
 
 lazy val `storage-partitioner` = (project in file("."))
-  .aggregate(api, s3, druid, all)
+  .aggregate(`storage-partitioner-api`, `storage-partitioner-s3`, `storage-partitioner-druid`, `storage-partitioner-all`)
 
-lazy val api = (project in file("src/api"))
+lazy val `storage-partitioner-api` = (project in file("src/api"))
   .enablePlugins(CommonPlugin, BuildInfoPlugin)
   .settings(name := "storage-partitioner-api")
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-api", s3Resolver))
@@ -16,23 +16,31 @@ lazy val api = (project in file("src/api"))
   .settings(buildInfoOptions ++= Seq(BuildInfoOption.ToJson))
   .settings(buildInfoPackage := "gwi.partitioner")
 
-lazy val s3 = (project in file("src/core/s3"))
+lazy val `storage-partitioner-s3` = (project in file("src/core/s3"))
   .enablePlugins(CommonPlugin)
-  .settings(name := "s3-storage-partitioner")
+  .settings(name := "storage-partitioner-s3")
   .settings(libraryDependencies += awsS3)
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-s3", s3Resolver))
-  .dependsOn(api % "compile->compile;test->test")
+  .dependsOn(
+    `storage-partitioner-api` % "compile->compile;test->test"
+  )
 
-lazy val druid = (project in file("src/core/druid"))
+lazy val `storage-partitioner-druid` = (project in file("src/core/druid"))
   .enablePlugins(CommonPlugin)
-  .settings(name := "druid-storage-partitioner")
-  .dependsOn(api % "compile->compile;test->test")
+  .settings(name := "storage-partitioner-druid")
+  .dependsOn(`storage-partitioner-api` % "compile->compile;test->test")
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-druid", s3Resolver))
-  .dependsOn(ProjectRef(uri("https://github.com/GlobalWebIndex/druid4s.git#v0.0.1"), "client") % "compile->compile;test->test")
+  .dependsOn(
+    ProjectRef(uri("https://github.com/GlobalWebIndex/druid4s.git#v0.0.1"), "druid4s-client") % "compile->compile;test->test"
+  )
 
-lazy val all = (project in file("src/all"))
+lazy val `storage-partitioner-all` = (project in file("src/all"))
   .enablePlugins(CommonPlugin)
-  .settings(name := "storage-partitioner")
+  .settings(name := "storage-partitioner-all")
   .settings(libraryDependencies += sprayJson)
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner", s3Resolver))
-  .dependsOn(api % "compile->compile;test->test", s3 % "compile->compile;test->test", druid % "compile->compile;test->test")
+  .dependsOn(
+    `storage-partitioner-api` % "compile->compile;test->test",
+    `storage-partitioner-s3` % "compile->compile;test->test",
+    `storage-partitioner-druid` % "compile->compile;test->test"
+  )
