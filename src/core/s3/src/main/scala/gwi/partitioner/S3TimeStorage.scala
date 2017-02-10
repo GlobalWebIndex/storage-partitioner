@@ -9,7 +9,7 @@ import com.amazonaws.services.s3.model.ObjectMetadata
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 import scala.util.Try
 
@@ -70,7 +70,7 @@ object S3TimeStorage {
         val pathDepth = partitioner.granularity.arity - commonAncestorList.length
         def isValidPartition(timePath: S3Pointer) = driver.doesObjectExist(source.bucket, timePath.partitionFileKey(".success"))
 
-        driver.getRelativeDirPaths(source.bucket, storagePrefix, pathDepth, "/", math.pow(3, partitioner.granularity.arity).toInt)
+        driver.getRelativeDirPaths(source.bucket, storagePrefix, pathDepth, "/")
           .map { s3DirPaths =>
             s3DirPaths
               .map(commonAncestorList ++ _)
@@ -79,7 +79,7 @@ object S3TimeStorage {
               .collect { case (path, partition) if range.contains(partition.value.getStart) && isValidPartition(path) => partition }
               .sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) > 1 }
               .toVector
-          }(ExeC.global)
+          }(ExecutionContext.Implicits.global)
       }
     }
   }

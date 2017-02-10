@@ -1,6 +1,7 @@
 package gwi.partitioner
 
 import java.util
+import java.util.concurrent.Executors
 import java.util.zip.GZIPInputStream
 
 import com.amazonaws.auth.{AWSCredentials, BasicAWSCredentials}
@@ -8,10 +9,14 @@ import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.{ListObjectsRequest, ObjectListing, S3ObjectInputStream}
 import com.amazonaws.{ClientConfiguration, ClientConfigurationFactory}
+import monix.eval.Task
+import monix.execution.ExecutionModel.AlwaysAsyncExecution
+import monix.execution.UncaughtExceptionReporter
+import monix.execution.schedulers.AsyncScheduler
 
 import scala.annotation.tailrec
 import scala.collection.mutable.Builder
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 class S3Driver(credentials: AWSCredentials, region: Region, config: ClientConfiguration) extends AmazonS3Client(credentials, config) {
@@ -21,6 +26,14 @@ class S3Driver(credentials: AWSCredentials, region: Region, config: ClientConfig
 object S3Driver {
   def apply(id: String, key: String, region: String, config: ClientConfiguration = new ClientConfigurationFactory().getConfig): S3Driver =
     new S3Driver(new BasicAWSCredentials(id, key), Region.getRegion(Regions.fromName(region)), config)
+
+  lazy val cachedScheduler =
+    AsyncScheduler(
+      Executors.newSingleThreadScheduledExecutor(),
+      ExecutionContext.fromExecutorService(Executors.newCachedThreadPool()),
+      UncaughtExceptionReporter.LogExceptionsToStandardErr,
+      AlwaysAsyncExecution
+    )
 
   implicit class Pimp(s3: AmazonS3Client) {
 
@@ -82,17 +95,16 @@ object S3Driver {
       * @param delimiter of directories, usually slash
       * @return seq of directory name sequences at a certain level : Seq(Seq(2015, 01, 01, 01), Seq(2015, 01, 01, 02), Seq(2015, 01, 01, 03))
       */
-    def getRelativeDirPaths(bucket: String, prefix: String, atLevel: Int, delimiter: String, parallelism: Int): Future[Seq[Seq[String]]] = {
-      implicit val executionContext = ExeC.fixed(parallelism)
-      def listPrefixes(pref: String) = Future(commonPrefixSource(bucket, pref, delimiter, 100))
+    def getRelativeDirPaths(bucket: String, prefix: String, atLevel: Int, delimiter: String): Future[Seq[Seq[String]]] = {
+      def listPrefixes(pref: String) = Task(commonPrefixSource(bucket, pref, delimiter, 100))
 
-      def recursively(prefixesF: Future[Seq[String]]): Future[Seq[String]] = {
+      def recursively(prefixesF: Task[Seq[String]]): Task[Seq[String]] = {
         prefixesF.flatMap {
           case prefixes if prefixes.isEmpty =>
-            Future.successful(Seq.empty)
+            Task.eval(Seq.empty)
           case prefixes =>
-            recursively(Future.sequence(prefixes.map(listPrefixes)).map(_.flatten)(ExeC.sameThread)).map(prefixes ++ _)
-        }(ExeC.sameThread)
+            recursively(Task.gather(prefixes.map(listPrefixes)).map(_.flatten)).map(prefixes ++ _)
+        }
       }
       recursively(listPrefixes(prefix)).map { dirNames =>
         dirNames
@@ -101,7 +113,7 @@ object S3Driver {
             case arr if arr.length == atLevel => arr.toSeq
           }
       }
-    }
+    }.runAsync(cachedScheduler)
 
   }
 

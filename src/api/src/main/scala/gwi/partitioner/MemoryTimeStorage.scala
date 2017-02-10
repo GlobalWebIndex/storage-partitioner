@@ -2,7 +2,7 @@ package gwi.partitioner
 
 import org.joda.time.Interval
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 
 case class MemorySource(access: String, partitions: Seq[TimePartition], properties: Map[String, String]) extends StorageSource
@@ -15,8 +15,8 @@ object MemoryTimeStorage {
       private var state: Map[TimePartition, Boolean] = underlying.source.partitions.map(_ -> true).toMap
       def delete(partition: TimePartition): Unit = state = state - partition
       def markWithSuccess(partition: TimePartition): Unit = state = state.updated(partition, true)
-      def list: Future[Seq[TimePartition]] = Future(state.keys.toSeq)(ExeC.global)
-      def list(range: Interval): Future[Seq[TimePartition]] = list.map(_.filter(p => range.contains(p.value)))(ExeC.sameThread)
+      def list: Future[Seq[TimePartition]] = Future(state.keys.toSeq)(ExecutionContext.Implicits.global)
+      def list(range: Interval): Future[Seq[TimePartition]] = list.map(_.filter(p => range.contains(p.value)))(ExecutionContext.Implicits.global)
       def lookup(p: TimePartition): IdentityPointer = underlying.partitioner.construct(p, underlying.source)
     }
   }

@@ -38,7 +38,7 @@ class S3DriverSpec extends FreeSpec with S3Mock with Matchers with BeforeAndAfte
     }
 
     "relative dir paths" in {
-      val actual = Await.result(s3Driver.getRelativeDirPaths(bucket, basePath, 2, "/", 16), 1.minute)
+      val actual = Await.result(s3Driver.getRelativeDirPaths(bucket, basePath, 2, "/"), 1.minute)
       val expected = testKeys.map(_.split('/').slice(1, 3)) // 10/01, 10/02, 10/03, etc...
       assertResult(testKeys.size)(actual.size)
       assertResult(expected.map(_.mkString("/")).toSet)(actual.map(_.mkString("/")).toSet)

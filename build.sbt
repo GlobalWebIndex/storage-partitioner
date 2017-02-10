@@ -3,7 +3,7 @@ import gwi.sbt.CommonPlugin.autoImport._
 
 crossScalaVersions in ThisBuild := Seq("2.11.8", "2.12.1")
 organization in ThisBuild := "net.globalwebindex"
-libraryDependencies in ThisBuild ++= jodaTime ++ testingDeps
+libraryDependencies in ThisBuild ++= Seq(monix) ++ jodaTime ++ testingDeps
 
 lazy val `storage-partitioner` = (project in file("."))
   .aggregate(`storage-partitioner-api`, `storage-partitioner-s3`, `storage-partitioner-druid`, `storage-partitioner-all`)

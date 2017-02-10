@@ -3,7 +3,7 @@ package gwi.partitioner
 import gwi.druid.client.DruidClient
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.language.implicitConversions
 
@@ -32,7 +32,7 @@ object DruidTimeStorage {
             .map(partitioner.buildPartition)
             .filter(p => range.contains(p.value))
             .sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 1 }
-        }(ExeC.global)
+        }(ExecutionContext.Implicits.global)
       }
 
       def lookup(p: TimePartition): IdentityPointer = underlying.partitioner.construct(p, source)
