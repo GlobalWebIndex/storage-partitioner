@@ -1,7 +1,8 @@
 package gwi.partitioner
 
 import java.util
-import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent._
 import java.util.zip.GZIPInputStream
 
 import com.amazonaws.auth.{AWSCredentials, BasicAWSCredentials}
@@ -27,10 +28,34 @@ object S3Driver {
   def apply(id: String, key: String, region: String, config: ClientConfiguration = new ClientConfigurationFactory().getConfig): S3Driver =
     new S3Driver(new BasicAWSCredentials(id, key), Region.getRegion(Regions.fromName(region)), config)
 
+  private def friendlyCachedThreadPoolExecutor(name: String, corePoolFactor: Int, maximumPoolFactor: Int, keepAliveTime: Int) = {
+    def availableProcessors = Runtime.getRuntime.availableProcessors
+    def daemonThreadFactory = new ThreadFactory {
+      private val count = new AtomicInteger()
+      override def newThread(r: Runnable) = {
+        val thread = new Thread(r)
+        thread.setName(s"$name-${count.incrementAndGet}")
+        thread.setDaemon(true)
+        thread
+      }
+    }
+
+    val pool = new ThreadPoolExecutor(
+      corePoolFactor * availableProcessors,
+      maximumPoolFactor * availableProcessors,
+      keepAliveTime,
+      TimeUnit.SECONDS,
+      new SynchronousQueue[Runnable](),
+      daemonThreadFactory
+    )
+    pool.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy)
+    pool
+  }
+
   lazy val cachedScheduler =
     AsyncScheduler(
       Executors.newSingleThreadScheduledExecutor(),
-      ExecutionContext.fromExecutorService(Executors.newCachedThreadPool()),
+      ExecutionContext.fromExecutorService(friendlyCachedThreadPoolExecutor("s3Driver", 4, 20, 60)),
       UncaughtExceptionReporter.LogExceptionsToStandardErr,
       AlwaysAsyncExecution
     )
@@ -96,7 +121,7 @@ object S3Driver {
       * @return seq of directory name sequences at a certain level : Seq(Seq(2015, 01, 01, 01), Seq(2015, 01, 01, 02), Seq(2015, 01, 01, 03))
       */
     def getRelativeDirPaths(bucket: String, prefix: String, atLevel: Int, delimiter: String): Future[Seq[Seq[String]]] = {
-      def listPrefixes(pref: String) = Task(commonPrefixSource(bucket, pref, delimiter, 100))
+      def listPrefixes(pref: String) = Task.fork(Task.eval(commonPrefixSource(bucket, pref, delimiter, 100)), cachedScheduler).asyncBoundary
 
       def recursively(prefixesF: Task[Seq[String]]): Task[Seq[String]] = {
         prefixesF.flatMap {
@@ -112,8 +137,8 @@ object S3Driver {
           .collect {
             case arr if arr.length == atLevel => arr.toSeq
           }
-      }
-    }.runAsync(cachedScheduler)
+      }.runAsync(monix.execution.Scheduler.Implicits.global)
+    }
 
   }
 
