@@ -1,16 +1,23 @@
 package gwi.partitioner
 
+import java.io.ByteArrayInputStream
 import java.util
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent._
 import java.util.zip.GZIPInputStream
+import javax.xml.bind.DatatypeConverter._
 
+import akka.actor.{ActorLogging, ActorSystem, Props}
+import akka.stream.Materializer
+import akka.stream.actor.ActorPublisher
+import akka.stream.actor.ActorPublisherMessage.{Cancel, Request}
 import akka.stream.alpakka.s3.scaladsl.S3Client
 import akka.stream.alpakka.s3.auth
+import akka.stream.scaladsl.{Sink, Source}
 import com.amazonaws.auth.{AWSCredentials, BasicAWSCredentials}
 import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.services.s3.AmazonS3Client
-import com.amazonaws.services.s3.model.{ListObjectsRequest, ObjectListing, S3ObjectInputStream}
+import com.amazonaws.services.s3.model.{S3ObjectSummary, _}
 import com.amazonaws.{ClientConfiguration, ClientConfigurationFactory}
 import monix.eval.Task
 import monix.execution.ExecutionModel.AlwaysAsyncExecution
@@ -20,15 +27,17 @@ import monix.execution.schedulers.AsyncScheduler
 import scala.annotation.tailrec
 import scala.collection.mutable.Builder
 import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.control.NonFatal
+import scala.util.matching.Regex
+import scala.util.{Failure, Success, Try}
 
-class S3Driver(credentials: AWSCredentials, region: Region, config: ClientConfiguration) extends AmazonS3Client(credentials, config) {
+class S3Driver(credentials: AWSCredentials, region: Region, config: ClientConfiguration)(implicit system: ActorSystem, mat: Materializer) extends AmazonS3Client(credentials, config) {
   lazy val alpakka = new S3Client(auth.AWSCredentials(credentials.getAWSAccessKeyId, credentials.getAWSSecretKey), region.getName)
   setRegion(region)
 }
 
 object S3Driver {
-  def apply(id: String, key: String, region: String, config: ClientConfiguration = new ClientConfigurationFactory().getConfig): S3Driver =
+  def apply(id: String, key: String, region: String, config: ClientConfiguration = new ClientConfigurationFactory().getConfig)(implicit system: ActorSystem, mat: Materializer): S3Driver =
     new S3Driver(new BasicAWSCredentials(id, key), Region.getRegion(Regions.fromName(region)), config)
 
   private def friendlyCachedThreadPoolExecutor(name: String, corePoolFactor: Int, maximumPoolFactor: Int, keepAliveTime: Int) = {
@@ -143,6 +152,127 @@ object S3Driver {
       }.runAsync(monix.execution.Scheduler.Implicits.global)
     }
 
+  }
+
+  case class Attempt(n: Int, sleep_s: Int)
+  case class S3PutException(msg: String, optCause: Option[Throwable] = None) extends Exception(msg, optCause.orNull)
+
+  implicit class S3Pimp[C <: AmazonS3Client](underlying: C) {
+
+    /**
+      * Rock solid s3 put method that is avoiding common bandwidth problems
+      * leading to socket connection closed exceptions and mismatching md5 hashes
+      * by attempting to put s3 object multiple times until it succeeds
+      */
+    def putUntilSuccess(bucket: String, bucketPath: String, data: Array[Byte], md5: Option[String], attempt: Attempt = Attempt(5, 5)): Try[PutObjectResult] = {
+      val metaData = new ObjectMetadata()
+      metaData.setContentLength(data.length)
+      md5.foreach(metaData.setContentMD5)
+      Try(underlying.putObject(bucket, bucketPath, new ByteArrayInputStream(data), metaData)) match {
+        case s@Success(result) if util.Arrays.equals(parseBase64Binary(result.getContentMd5), parseHexBinary(result.getETag)) =>
+          s
+        case failed if attempt.n > 0 =>
+          putUntilSuccess(bucket, bucketPath, data, md5, attempt.copy(n = attempt.n-1))
+        case Success(result) =>
+          Try(underlying.deleteObject(bucket, bucketPath))
+          Failure(S3PutException(s"Unable to copy resource to $bucket:$bucketPath due to repeated md5 hash mismatch !!!"))
+        case Failure(ex) =>
+          Failure(S3PutException(s"Unable to copy resource to $bucket:$bucketPath due to unexpected s3 error", Option(ex)))
+
+      }
+    }
+
+    def getDirFileNames(bucket: String, dirPath: String, regex: Regex)(implicit m: Materializer): Future[Seq[String]] = {
+      val slashEndingDirPath = if (dirPath.endsWith("/")) dirPath else dirPath + "/"  // let's avoid users listing anything else than directories, it's dangerous
+      objSummarySource(bucket, slashEndingDirPath)
+        .map(_.getKey.split("/").last)
+        .filter(regex.pattern.matcher(_).matches())
+        .runWith(Sink.seq)
+    }
+
+    def readObjectStream[T](bucketName: String, key: String)(fn: (S3ObjectInputStream) => T): T = {
+      val s3Obj = underlying.getObject(bucketName, key)
+      try fn(s3Obj.getObjectContent) finally Try(s3Obj.close())
+    }
+
+    /**
+      * @note that s3 storage considers even "directories" as objects, so this method lists them too, it is your responsibility to filter them out
+      */
+    def objSummarySource(bucket: String, prefix: String, maxKeys: Int = 1000): Source[S3ObjectSummary, _] =
+      Source.actorPublisher(Props(classOf[S3ObjectSummariesListingPublisher], new ListObjectsRequest().withBucketName(bucket).withPrefix(prefix).withMaxKeys(maxKeys), underlying))
+
+    def commonPrefixSource(bucket: String, prefix: String, delimiter: String): Source[String, _] = {
+      val slashEndingDirPath = if (prefix.endsWith(delimiter)) prefix else prefix + delimiter // commonPrefixes method expects prefix to end with delimiter
+      val request = new ListObjectsRequest().withBucketName(bucket).withPrefix(slashEndingDirPath).withDelimiter(delimiter)
+      Source.actorPublisher(Props(classOf[S3CommonPrefixesListingPublisher], request, underlying))
+    }
+  }
+
+  trait IteratorBasedActorPublisher[T] extends ActorPublisher[T] {
+
+    var iterator: Iterator[T]
+
+    def onIteratorNext(elm: T): Unit = onNext(elm)
+    def onIteratorCompleted(): Unit = onCompleteThenStop()
+    def onIteratorHasNextError(ex: Throwable): Unit = onErrorThenStop(ex) // Note that stream hasNext throws exception !
+
+    def pushNext: Boolean = try {
+      if (iterator.hasNext) {
+        onIteratorNext(iterator.next())
+        true
+      } else {
+        onIteratorCompleted()
+        false
+      }
+    } catch {
+      case NonFatal(ex) =>
+        onIteratorHasNextError(ex)
+        false
+    }
+
+    def receive: Receive = {
+      case Request(n) if totalDemand > 0 && isActive =>
+        (1L to Math.min(n, totalDemand)).foldLeft(true) {
+          case (acc,i) => if (acc) pushNext else false
+        }
+
+      case Cancel =>
+        context.stop(self)
+    }
+  }
+
+  abstract class S3ObjectListingPublisher[T](req: ListObjectsRequest, s3: AmazonS3Client) extends IteratorBasedActorPublisher[T] with ActorLogging {
+    import scala.concurrent.duration._
+
+    def mapListing(objectListing: ObjectListing): Iterator[T]
+
+    private def listObjects = IO.reRun(3, 10.seconds, log.error)(s3.listObjects(req))
+
+    var objListing = listObjects
+    var iterator = mapListing(objListing)
+
+    override def onIteratorCompleted(): Unit = {
+      req.setMarker(objListing.getNextMarker)
+      if (objListing.isTruncated) {
+        objListing = listObjects
+        iterator = mapListing(objListing)
+        pushNext
+      } else {
+        objListing = null
+        iterator = null
+        onCompleteThenStop()
+      }
+    }
+  }
+
+  class S3ObjectSummariesListingPublisher(req: ListObjectsRequest, s3: AmazonS3Client) extends S3ObjectListingPublisher[S3ObjectSummary](req, s3) {
+    import scala.collection.JavaConverters._
+    def mapListing(objectListing: ObjectListing) = objectListing.getObjectSummaries.asScala.toIterator
+  }
+
+  class S3CommonPrefixesListingPublisher(req: ListObjectsRequest, s3: AmazonS3Client) extends S3ObjectListingPublisher[String](req, s3) {
+    import scala.collection.JavaConverters._
+    def mapListing(objectListing: ObjectListing) = objectListing.getCommonPrefixes.asScala.toIterator
   }
 
 }

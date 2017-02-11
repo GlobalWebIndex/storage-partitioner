@@ -4,7 +4,26 @@ import java.io._
 import java.nio.charset.StandardCharsets
 import java.util.zip.{GZIPInputStream, GZIPOutputStream}
 
+import scala.annotation.tailrec
+import scala.concurrent.duration.Duration
+import scala.util.{Failure, Success, Try}
+
 object IO {
+  @tailrec
+  def reTry[T](attempts: Int, in: Duration, logError: (String, Throwable) => Unit)(attempt: => Try[T]): Try[T] = attempt match {
+    case s@Success(_) => s
+    case Failure(ex) if attempts > 1 =>
+      logError("Recovering from unexpected error", ex)
+      Thread.sleep(in.toMillis)
+      reTry(attempts - 1, in, logError)(attempt)
+    case f@Failure(ex) =>
+      logError(s"Unable to recover from error, not even after trying $attempts times !!!", ex)
+      f
+  }
+
+  def reRun[T](attempts: Int, in: Duration, logError: (String, Throwable) => Unit)(attempt: => T): T =
+    reTry(attempts, in, logError)(Try(attempt)).get
+
   def streamToString(is: InputStream, bufferSizeInBytes: Int): String =
     try {
       val reader = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8), bufferSizeInBytes)

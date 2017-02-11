@@ -1,18 +1,24 @@
 package gwi.partitioner
 
 import java.io.File
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FreeSpec, Matchers}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class S3DriverSpec extends FreeSpec with S3Mock with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class S3DriverSpec extends FreeSpec with S3Mock with ScalaFutures with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val bucket = "gwiq-views-t"
   val basePath = "S3DriverSpec/"
 
   val testFile = File.createTempFile("test", ".txt")
+  val testFileContent = "lorem\nipsum"
+  Files.write(testFile.toPath, testFileContent.getBytes(StandardCharsets.UTF_8))
 
   val testKeys = (10 to 60).filter(_ % 10 == 0).map(_.toString).flatMap(root => (1 to 3).map(basePath + root + "/" + _ + "/" + testFile.getName))
 
@@ -24,7 +30,7 @@ class S3DriverSpec extends FreeSpec with S3Mock with Matchers with BeforeAndAfte
     stopS3Container(testKeys.foreach(s3Driver.deleteObject(bucket,_)))
   }
 
-  "s3 should list all " - {
+  "should list all " - {
 
     "keys with prefix" in {
       val actual = s3Driver.listKeys(bucket, basePath)

@@ -1,11 +1,27 @@
 package gwi.partitioner
 
+import akka.actor.ActorSystem
+import akka.stream.ActorMaterializer
+import akka.util.Timeout
 import com.amazonaws.services.s3.S3ClientOptions
+import org.scalatest.{BeforeAndAfterAll, Suite}
 
+import scala.concurrent.duration.{Duration, _}
+import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.sys.process.Process
 import scala.util.{Random, Try}
 
-trait S3Mock {
+trait AkkaSupport extends Suite with BeforeAndAfterAll {
+  implicit val timeout = Timeout(10.seconds)
+  implicit lazy val system = ActorSystem("AkkaSuiteSystem")
+  implicit lazy val materializer = ActorMaterializer()
+
+  override def afterAll(): Unit = try super.afterAll() finally {
+    Await.ready(Future(system.terminate())(ExecutionContext.global), Duration.Inf)
+  }
+}
+
+trait S3Mock extends AkkaSupport {
 
   private def docker(cmd: String) = Array("/bin/sh", "-c", s"docker $cmd")
   private val randomPort = Random.nextInt(1000) + 4000

@@ -3,7 +3,7 @@ package gwi.partitioner
 import gwi.druid.client.DruidClient
 import org.scalatest._
 
-class StorageSpec extends FreeSpec with StorageCodec with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class StorageSpec extends FreeSpec with StorageCodec with AkkaSupport with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val s3S = S3TimeStorage("foo", S3Source("bar", "baz/", "rw", Map.empty), S3TimePartitioner.plain(Granularity.HOUR))
   val druidS = DruidTimeStorage("foo", DruidSource("bar", "baz", "fuz", "huz", "rw", Map.empty), IdentityTimePartitioner(Granularity.HOUR))
