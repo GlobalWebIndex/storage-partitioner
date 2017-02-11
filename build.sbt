@@ -19,7 +19,7 @@ lazy val `storage-partitioner-api` = (project in file("src/api"))
 lazy val `storage-partitioner-s3` = (project in file("src/core/s3"))
   .enablePlugins(CommonPlugin)
   .settings(name := "storage-partitioner-s3")
-  .settings(libraryDependencies += awsS3)
+  .settings(libraryDependencies ++= Seq(awsS3, "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpakkaVersion))
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-s3", s3Resolver))
   .dependsOn(
     `storage-partitioner-api` % "compile->compile;test->test"

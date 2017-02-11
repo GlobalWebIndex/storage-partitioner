@@ -5,6 +5,8 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent._
 import java.util.zip.GZIPInputStream
 
+import akka.stream.alpakka.s3.scaladsl.S3Client
+import akka.stream.alpakka.s3.auth
 import com.amazonaws.auth.{AWSCredentials, BasicAWSCredentials}
 import com.amazonaws.regions.{Region, Regions}
 import com.amazonaws.services.s3.AmazonS3Client
@@ -21,6 +23,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 class S3Driver(credentials: AWSCredentials, region: Region, config: ClientConfiguration) extends AmazonS3Client(credentials, config) {
+  lazy val alpakka = new S3Client(auth.AWSCredentials(credentials.getAWSAccessKeyId, credentials.getAWSSecretKey), region.getName)
   setRegion(region)
 }
 
