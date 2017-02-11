@@ -72,10 +72,13 @@ object S3Driver {
       AlwaysAsyncExecution
     )
 
-  implicit class Pimp(s3: AmazonS3Client) {
+  case class Attempt(n: Int, sleep_s: Int)
+  case class S3PutException(msg: String, optCause: Option[Throwable] = None) extends Exception(msg, optCause.orNull)
+
+  implicit class S3Pimp[C <: AmazonS3Client](underlying: C) {
 
     def readObjectStream[T](bucketName: String, key: String)(fn: (S3ObjectInputStream) => T): T = {
-      val s3Obj = s3.getObject(bucketName, key)
+      val s3Obj = underlying.getObject(bucketName, key)
       try fn(s3Obj.getObjectContent) finally Try(s3Obj.close())
     }
 
@@ -97,12 +100,12 @@ object S3Driver {
       def recursively(listing: ObjectListing, summaries: Builder[String, Vector[String]]): Builder[String, Vector[String]] = {
         summaries ++= listing.getObjectSummaries.asScala.map(_.getKey)
         if (listing.isTruncated) {
-          recursively(s3.listNextBatchOfObjects(listing), summaries)
+          recursively(underlying.listNextBatchOfObjects(listing), summaries)
         } else {
           summaries
         }
       }
-      recursively(s3.listObjects(bucketName, prefix), Vector.newBuilder[String]).result()
+      recursively(underlying.listObjects(bucketName, prefix), Vector.newBuilder[String]).result()
     }
 
     def commonPrefixSource(bucket: String, prefix: String, delimiter: String, expectedSize: Int): Seq[String] = {
@@ -111,7 +114,7 @@ object S3Driver {
         result.addAll(listing.getCommonPrefixes)
         if (listing.isTruncated) {
           req.setMarker(listing.getNextMarker)
-          recursively(req, s3.listObjects(req), result)
+          recursively(req, underlying.listObjects(req), result)
         } else {
           result
         }
@@ -119,9 +122,8 @@ object S3Driver {
       import scala.collection.JavaConverters._
       val slashEndingDirPath = if (prefix.endsWith(delimiter)) prefix else prefix + delimiter // commonPrefixes method expects prefix to end with delimiter
       val req = new ListObjectsRequest().withBucketName(bucket).withPrefix(slashEndingDirPath).withDelimiter(delimiter)
-      recursively(req, s3.listObjects(req), new util.ArrayList[String](expectedSize)).asScala
+      recursively(req, underlying.listObjects(req), new util.ArrayList[String](expectedSize)).asScala
     }
-
 
     /**
       * Purpose of this method is listing logical partitions of s3 storage, For instance TimeSeries data is stored in this hierarchy 2015/01/01/01
@@ -152,13 +154,6 @@ object S3Driver {
       }.runAsync(monix.execution.Scheduler.Implicits.global)
     }
 
-  }
-
-  case class Attempt(n: Int, sleep_s: Int)
-  case class S3PutException(msg: String, optCause: Option[Throwable] = None) extends Exception(msg, optCause.orNull)
-
-  implicit class S3Pimp[C <: AmazonS3Client](underlying: C) {
-
     /**
       * Rock solid s3 put method that is avoiding common bandwidth problems
       * leading to socket connection closed exceptions and mismatching md5 hashes
@@ -188,11 +183,6 @@ object S3Driver {
         .map(_.getKey.split("/").last)
         .filter(regex.pattern.matcher(_).matches())
         .runWith(Sink.seq)
-    }
-
-    def readObjectStream[T](bucketName: String, key: String)(fn: (S3ObjectInputStream) => T): T = {
-      val s3Obj = underlying.getObject(bucketName, key)
-      try fn(s3Obj.getObjectContent) finally Try(s3Obj.close())
     }
 
     /**
