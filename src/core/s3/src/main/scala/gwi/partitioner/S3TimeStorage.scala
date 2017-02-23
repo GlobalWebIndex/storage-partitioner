@@ -34,7 +34,7 @@ object S3TimeStorage {
 
       private def checkPermissions() = require(source.access.contains("w"), s"s3://${source.bucket}/${source.path} has not write permissions !!!")
 
-      def lookup(p: TimePartition): S3Pointer = underlying.partitioner.construct(p, source)
+      def lookup(p: TimePartition): S3TimePath = underlying.partitioner.construct(p, source)
 
       def delete(partition: TimePartition): Unit = {
         checkPermissions()
@@ -68,13 +68,13 @@ object S3TimeStorage {
 
         val storagePrefix = s"${source.path}${commonAncestorList.mkString("/")}"
         val pathDepth = partitioner.granularity.arity - commonAncestorList.length
-        def isValidPartition(timePath: S3Pointer) = driver.doesObjectExist(source.bucket, timePath.partitionFileKey(".success"))
+        def isValidPartition(timePath: S3TimePath) = driver.doesObjectExist(source.bucket, timePath.partitionFileKey(".success"))
 
         driver.getRelativeDirPaths(source.bucket, storagePrefix, pathDepth, "/")
           .map { s3DirPaths =>
             s3DirPaths
               .map(commonAncestorList ++ _)
-              .map(arr => S3Pointer(source.bucket, source.path, arr.mkString("", "/", "/")))
+              .map(arr => S3TimePath(source.bucket, source.path, arr.mkString("", "/", "/")))
               .map(path => path -> partitioner.deconstruct(path).get)
               .collect { case (path, partition) if range.contains(partition.value.getStart) && isValidPartition(path) => partition }
               .sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) > 1 }
@@ -86,26 +86,26 @@ object S3TimeStorage {
 }
 
 trait S3TimeClient extends TimeClient {
-  type OUT = S3Pointer
+  type OUT = S3TimePath
   def indexData(partition: TimePartition, fileName: String, content: String): Unit
 }
 
-case class S3Pointer(bucket: String, path: String, timePath: String) extends Pointer {
+case class S3TimePath(bucket: String, path: String, timePath: String) extends Pointer {
   def partitionKey: String = path + timePath
   def partitionFileKey(name: String): String = path + timePath + name
 }
 
 case class S3TimePartitioner(granularity: Granularity, private val pathFormat: Option[String], private val pathPattern: Option[String]) extends TimePartitioner {
-  type OUT = S3Pointer
+  type OUT = S3TimePath
   type S = S3Source
   private[this] val pathFormatter = DateTimeFormat.forPattern(pathFormat.getOrElse(S3TimePartitioner.PlainPathFormat).split("/").take(granularity.arity).mkString("/"))
   private[this] val compiledPathPattern = Pattern.compile(pathPattern.getOrElse(S3TimePartitioner.PlainPathPattern))
 
   def dateToPath(dateTime: DateTime): String = pathFormatter.print(dateTime) + "/"
 
-  def construct(p: TimePartition, s: S3Source): S3Pointer = S3Pointer(s.bucket, s.path, dateToPath(p.value.getStart))
+  def construct(p: TimePartition, s: S3Source): S3TimePath = S3TimePath(s.bucket, s.path, dateToPath(p.value.getStart))
 
-  def deconstruct(path: S3Pointer): Option[TimePartition] = {
+  def deconstruct(path: S3TimePath): Option[TimePartition] = {
     val matcher = compiledPathPattern.matcher(path.timePath)
     def group(i: Int): Option[Int] = Try(matcher.group(i)).map(Option(_).map(_.toInt)).getOrElse(None)
     Option(matcher.matches())

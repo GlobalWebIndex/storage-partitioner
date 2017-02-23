@@ -17,8 +17,8 @@ class S3TimePartitionerSpec extends FreeSpec with Matchers {
   "toPath" in {
     val plainPartitioner = S3TimePartitioner.plain(HOUR)
     val qualifiedPartitioner = S3TimePartitioner.qualified(HOUR)
-    assertResult(S3Pointer(bucket, path, "2011/02/03/04/"))(plainPartitioner.construct(plainPartitioner.buildPartition("2011-02-03T04:00:00.000/2011-02-03T05:00:00.000"), source))
-    assertResult(S3Pointer(bucket, path, "y=2011/m=02/d=03/H=04/"))(qualifiedPartitioner.construct(qualifiedPartitioner.buildPartition("2011-02-03T04:00:00.000/2011-02-03T05:00:00.000"), source))
+    assertResult(S3TimePath(bucket, path, "2011/02/03/04/"))(plainPartitioner.construct(plainPartitioner.buildPartition("2011-02-03T04:00:00.000/2011-02-03T05:00:00.000"), source))
+    assertResult(S3TimePath(bucket, path, "y=2011/m=02/d=03/H=04/"))(qualifiedPartitioner.construct(qualifiedPartitioner.buildPartition("2011-02-03T04:00:00.000/2011-02-03T05:00:00.000"), source))
   }
 
   "test hour to date" in {
@@ -67,14 +67,14 @@ class S3TimePartitionerSpec extends FreeSpec with Matchers {
     val qualifiedP = S3TimePartitioner.qualified(granularity)
     dateTime match {
       case None =>
-        assertResult(None)(plainP.deconstruct(S3Pointer(bucket, path, plainPath)))
-        assertResult(None)(qualifiedP.deconstruct(S3Pointer(bucket, path, qualifiedPath)))
+        assertResult(None)(plainP.deconstruct(S3TimePath(bucket, path, plainPath)))
+        assertResult(None)(qualifiedP.deconstruct(S3TimePath(bucket, path, qualifiedPath)))
       case Some(Success(date)) =>
-        assertResult(granularity.bucket(date))(plainP.deconstruct(S3Pointer(bucket, path, plainPath)).get.value)
-        assertResult(granularity.bucket(date))(qualifiedP.deconstruct(S3Pointer(bucket, path, qualifiedPath)).get.value)
+        assertResult(granularity.bucket(date))(plainP.deconstruct(S3TimePath(bucket, path, plainPath)).get.value)
+        assertResult(granularity.bucket(date))(qualifiedP.deconstruct(S3TimePath(bucket, path, qualifiedPath)).get.value)
       case Some(Failure(ex)) =>
-        assertThrows[IllegalFieldValueException](plainP.deconstruct(S3Pointer(bucket, path, plainPath)))
-        assertThrows[IllegalFieldValueException](qualifiedP.deconstruct(S3Pointer(bucket, path, qualifiedPath)))
+        assertThrows[IllegalFieldValueException](plainP.deconstruct(S3TimePath(bucket, path, plainPath)))
+        assertThrows[IllegalFieldValueException](qualifiedP.deconstruct(S3TimePath(bucket, path, qualifiedPath)))
     }
   }
 
