@@ -21,6 +21,6 @@ notifications:
     recipients:
       - liska.jakub@gmail.com
 before_install:
-- docker pull lphoward/fake-s3
+- docker pull gwiq/fake-s3
 script:
 - sbt ++$TRAVIS_SCALA_VERSION clean test

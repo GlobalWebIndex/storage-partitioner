@@ -28,7 +28,7 @@ trait S3Mock extends AkkaSupport {
   private val randomName = s"fake-s3-$randomPort"
 
   protected def startS3Container(prepare: => Unit): Unit = {
-    require(Process(docker(s"run --name $randomName -p $randomPort:$randomPort -d lphoward/fake-s3 -r /fakes3_root -p $randomPort")).run().exitValue == 0)
+    require(Process(docker(s"run --name $randomName -p $randomPort:$randomPort -d gwiq/fake-s3 -r /fakes3_root -p $randomPort")).run().exitValue == 0)
     Thread.sleep(500)
     prepare
   }
