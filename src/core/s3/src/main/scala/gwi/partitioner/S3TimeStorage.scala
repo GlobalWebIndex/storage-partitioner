@@ -18,7 +18,7 @@ case class S3Source(bucket: String, path: String, access: String, properties: Ma
 }
 case class S3TimeStorage(id: String, source: S3Source, partitioner: S3TimePartitioner) extends TimeStorage[S3Source, S3TimePartitioner, S3TimeClient] {
   type OUT = S3TimePath
-  def lift(d: DateTime): S3TimePath = S3TimePath(source.bucket, source.path, partitioner.dateToPath(d))
+  def lift(d: DateTime): S3TimePath = S3TimePath(source.bucket, source.path, partitioner.lift(d))
   def lift(p: TimePartition): S3TimePath = lift(p.value)
   def lift(i: Interval): S3TimePath = {
     require(partitioner.granularity.getIterable(i).size == 1)
@@ -66,7 +66,7 @@ object S3TimeStorage {
         list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))
 
       def list(range: Interval): Future[Seq[TimePartition]] = {
-        def timePath(time: DateTime) = partitioner.dateToPath(time).split("/").filter(_.nonEmpty)
+        def timePath(time: DateTime) = partitioner.lift(time).split("/").filter(_.nonEmpty)
         val commonAncestorList =
           timePath(range.getStart).zip(timePath(range.getEnd))
             .takeWhile(p => p._1 == p._2)
@@ -107,7 +107,7 @@ case class S3TimePartitioner(granularity: Granularity, private val pathFormat: O
   private[this] val pathFormatter = DateTimeFormat.forPattern(pathFormat.getOrElse(S3TimePartitioner.PlainPathFormat).split("/").take(granularity.arity).mkString("/"))
   private[this] val compiledPathPattern = Pattern.compile(pathPattern.getOrElse(S3TimePartitioner.PlainPathPattern))
 
-  def dateToPath(dateTime: DateTime): String = pathFormatter.print(dateTime) + "/"
+  def lift(dateTime: DateTime): String = pathFormatter.print(dateTime) + "/"
 
   def deconstruct(path: S3TimePath): Option[TimePartition] = {
     val matcher = compiledPathPattern.matcher(path.timePath)
