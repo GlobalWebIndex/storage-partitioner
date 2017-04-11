@@ -18,7 +18,12 @@ case class S3Source(bucket: String, path: String, access: String, properties: Ma
 }
 case class S3TimeStorage(id: String, source: S3Source, partitioner: S3TimePartitioner) extends TimeStorage[S3Source, S3TimePartitioner, S3TimeClient] {
   type OUT = S3TimePath
-  def lift(p: TimePartition): S3TimePath = S3TimePath(source.bucket, source.path, partitioner.dateToPath(p.value.getStart))
+  def lift(d: DateTime): S3TimePath = S3TimePath(source.bucket, source.path, partitioner.dateToPath(d))
+  def lift(p: TimePartition): S3TimePath = lift(p.value)
+  def lift(i: Interval): S3TimePath = {
+    require(partitioner.granularity.getIterable(i).size == 1)
+    lift(i.getStart)
+  }
 }
 
 object S3TimeStorage {
