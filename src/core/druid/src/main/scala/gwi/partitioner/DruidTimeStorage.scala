@@ -9,7 +9,10 @@ import scala.language.implicitConversions
 
 case class DruidSource(dataSource: String, coordinator: String, overlord: String, broker: String, access: String, properties: Map[String,String]) extends StorageSource
 
-case class DruidTimeStorage(id: String, source: DruidSource, partitioner: IdentityTimePartitioner) extends TimeStorage[DruidSource, IdentityTimePartitioner, TimeClient]
+case class DruidTimeStorage(id: String, source: DruidSource, partitioner: IdentityTimePartitioner) extends TimeStorage[DruidSource, IdentityTimePartitioner, TimeClient] {
+  type OUT = IdentityPointer
+  def lift(p: TimePartition): IdentityPointer = IdentityPointer(p.value.toString)
+}
 
 object DruidTimeStorage {
   implicit class DruidTimeStoragePimp(underlying: DruidTimeStorage) {
@@ -35,7 +38,6 @@ object DruidTimeStorage {
         }(ExecutionContext.Implicits.global)
       }
 
-      def lookup(p: TimePartition): IdentityPointer = underlying.partitioner.construct(p, source)
     }
   }
 }

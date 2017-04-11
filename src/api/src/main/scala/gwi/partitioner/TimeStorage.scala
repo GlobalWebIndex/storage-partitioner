@@ -26,7 +26,6 @@ case class IdentityPointer(value: String) extends Pointer
 case class IdentityTimePartitioner(granularity: Granularity) extends TimePartitioner {
   type OUT = IdentityPointer
   type S = StorageSource
-  def construct(p: TimePartition, s: StorageSource) = IdentityPointer(p.value.toString)
   def deconstruct(p: IdentityPointer) = Option(buildPartition(p.value))
 }
 

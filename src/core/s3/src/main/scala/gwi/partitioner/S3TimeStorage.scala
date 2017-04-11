@@ -16,7 +16,10 @@ import scala.util.Try
 case class S3Source(bucket: String, path: String, access: String, properties: Map[String,String]) extends StorageSource {
   require(path.endsWith("/"), s"By convention, s3 paths must end with delimiter otherwise the key doesn't represent a directory, $path is invalid !!!")
 }
-case class S3TimeStorage(id: String, source: S3Source, partitioner: S3TimePartitioner) extends TimeStorage[S3Source, S3TimePartitioner, S3TimeClient]
+case class S3TimeStorage(id: String, source: S3Source, partitioner: S3TimePartitioner) extends TimeStorage[S3Source, S3TimePartitioner, S3TimeClient] {
+  type OUT = S3TimePath
+  def lift(p: TimePartition): S3TimePath = S3TimePath(source.bucket, source.path, partitioner.dateToPath(p.value.getStart))
+}
 
 object S3TimeStorage {
 
@@ -34,11 +37,9 @@ object S3TimeStorage {
 
       private def checkPermissions() = require(source.access.contains("w"), s"s3://${source.bucket}/${source.path} has not write permissions !!!")
 
-      def lookup(p: TimePartition): S3TimePath = underlying.partitioner.construct(p, source)
-
       def delete(partition: TimePartition): Unit = {
         checkPermissions()
-        val pointer = lookup(partition)
+        val pointer = underlying.lift(partition)
         driver
           .listKeys(pointer.bucket, pointer.partitionKey)
           .foreach(driver.deleteObject(source.bucket, _))
@@ -49,11 +50,11 @@ object S3TimeStorage {
         val inputStream = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8))
         val metaData = new ObjectMetadata()
         metaData.setContentLength(content.length)
-        driver.putObject(source.bucket, lookup(partition).partitionFileKey(fileName), inputStream, metaData)
+        driver.putObject(source.bucket, underlying.lift(partition).partitionFileKey(fileName), inputStream, metaData)
       }
 
       def markWithSuccess(partition: TimePartition): Unit = {
-        driver.putObject(source.bucket, lookup(partition).partitionFileKey(successFile.getName), successFile)
+        driver.putObject(source.bucket, underlying.lift(partition).partitionFileKey(successFile.getName), successFile)
       }
 
       def list: Future[Seq[TimePartition]] =
@@ -103,8 +104,6 @@ case class S3TimePartitioner(granularity: Granularity, private val pathFormat: O
 
   def dateToPath(dateTime: DateTime): String = pathFormatter.print(dateTime) + "/"
 
-  def construct(p: TimePartition, s: S3Source): S3TimePath = S3TimePath(s.bucket, s.path, dateToPath(p.value.getStart))
-
   def deconstruct(path: S3TimePath): Option[TimePartition] = {
     val matcher = compiledPathPattern.matcher(path.timePath)
     def group(i: Int): Option[Int] = Try(matcher.group(i)).map(Option(_).map(_.toInt)).getOrElse(None)
@@ -118,6 +117,31 @@ case class S3TimePartitioner(granularity: Granularity, private val pathFormat: O
   }
 
   def getPathFormat: String = pathFormat.getOrElse(S3TimePartitioner.PlainPathFormat).split("/").take(granularity.arity).mkString("/")
+
+/*
+  def buildPartition(s3Url: String): Option[S3TimePath] = {
+    Option(s3Url.startsWith("s3://") && s3Url.endsWith("/"))
+      .filter(identity)
+      .flatMap { _ =>
+        val s3UrlParts = s3Url.stripPrefix("s3://").stripSuffix("/").split("/")
+        val bucket = s3UrlParts.head
+        val path = s3UrlParts.tail.mkString("", "/", "/")
+        val matcher = compiledPathPattern.matcher(path)
+        def group(i: Int): Option[Int] = Try(matcher.group(i)).map(Option(_).map(_.toInt)).getOrElse(None)
+        Option(matcher.matches())
+          .filter(identity)
+          .map ( _ => Array(group(1),group(2),group(3),group(4),group(5),group(6)) )
+          .collect { case dateVals if dateVals.takeWhile(_.isDefined).length >= granularity.arity =>
+            val dv = (0 to 5).map( i => if (i < granularity.arity) dateVals(i).get else 0 )
+            val interval = granularity.bucket(new DateTime(dv(0), dv(1), dv(2), dv(3), dv(4), dv(5), DateTimeZone.UTC))
+            val timePath = dateToPath(interval.getStart)
+            val basePath = path.stripSuffix(timePath)
+            S3TimePath(bucket, basePath, timePath, interval)
+          }
+      }
+  }
+*/
+
 }
 
 object S3TimePartitioner {

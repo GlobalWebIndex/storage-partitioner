@@ -9,11 +9,9 @@ trait StoragePartition[P] {
 trait Pointer
 
 trait StorageClient[IN,SP <: StoragePartition[IN]] {
-  type OUT <: Pointer
   def delete(partition: SP): Unit
   def markWithSuccess(partition: SP): Unit
   def list: Future[Seq[SP]]
-  def lookup(p: SP): OUT
 }
 
 trait StorageSource {
@@ -23,13 +21,12 @@ trait StorageSource {
 
 trait Partitioner[IN, SP <: StoragePartition[IN]] {
   type OUT <: Pointer
-  type S <: StorageSource
-  def construct(p: SP, source: S): OUT
   def deconstruct(out: OUT): Option[SP]
   def buildPartition(p: String): SP
 }
 
 trait Storage[S <: StorageSource] {
+  type OUT <: Pointer
   type IN
   type SP <: StoragePartition[IN]
   type PR <: Partitioner[IN,SP]
@@ -37,4 +34,5 @@ trait Storage[S <: StorageSource] {
   def id: String
   def source: S
   def partitioner: PR
+  def lift(p: SP): OUT
 }
