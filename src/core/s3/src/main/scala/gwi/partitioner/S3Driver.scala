@@ -2,8 +2,8 @@ package gwi.partitioner
 
 import java.io.ByteArrayInputStream
 import java.util
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent._
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.GZIPInputStream
 import javax.xml.bind.DatatypeConverter._
 
@@ -11,8 +11,8 @@ import akka.actor.{ActorLogging, ActorSystem, Props}
 import akka.stream.Materializer
 import akka.stream.actor.ActorPublisher
 import akka.stream.actor.ActorPublisherMessage.{Cancel, Request}
-import akka.stream.alpakka.s3.scaladsl.S3Client
 import akka.stream.alpakka.s3.auth
+import akka.stream.alpakka.s3.scaladsl.S3Client
 import akka.stream.scaladsl.{Sink, Source}
 import com.amazonaws.auth.{AWSCredentials, BasicAWSCredentials}
 import com.amazonaws.regions.{Region, Regions}
@@ -44,7 +44,7 @@ object S3Driver {
     def availableProcessors = Runtime.getRuntime.availableProcessors
     def daemonThreadFactory = new ThreadFactory {
       private val count = new AtomicInteger()
-      override def newThread(r: Runnable) = {
+      override def newThread(r: Runnable): Thread = {
         val thread = new Thread(r)
         thread.setName(s"$name-${count.incrementAndGet}")
         thread.setDaemon(true)
@@ -200,11 +200,11 @@ object S3Driver {
 
   trait IteratorBasedActorPublisher[T] extends ActorPublisher[T] {
 
-    var iterator: Iterator[T]
+    protected[this] var iterator: Iterator[T]
 
-    def onIteratorNext(elm: T): Unit = onNext(elm)
+    protected[this] def onIteratorNext(elm: T): Unit = onNext(elm)
+    protected[this] def onIteratorHasNextError(ex: Throwable): Unit = onErrorThenStop(ex) // Note that stream hasNext throws exception !
     def onIteratorCompleted(): Unit = onCompleteThenStop()
-    def onIteratorHasNextError(ex: Throwable): Unit = onErrorThenStop(ex) // Note that stream hasNext throws exception !
 
     def pushNext: Boolean = try {
       if (iterator.hasNext) {
@@ -234,12 +234,11 @@ object S3Driver {
   abstract class S3ObjectListingPublisher[T](req: ListObjectsRequest, s3: AmazonS3Client) extends IteratorBasedActorPublisher[T] with ActorLogging {
     import scala.concurrent.duration._
 
+    private[this] def listObjects = IO.reRun(3, 10.seconds, log.error)(s3.listObjects(req))
+    private[this] var objListing = listObjects
+
     def mapListing(objectListing: ObjectListing): Iterator[T]
-
-    private def listObjects = IO.reRun(3, 10.seconds, log.error)(s3.listObjects(req))
-
-    var objListing = listObjects
-    var iterator = mapListing(objListing)
+    var iterator: Iterator[T] = mapListing(objListing)
 
     override def onIteratorCompleted(): Unit = {
       req.setMarker(objListing.getNextMarker)
@@ -257,12 +256,12 @@ object S3Driver {
 
   class S3ObjectSummariesListingPublisher(req: ListObjectsRequest, s3: AmazonS3Client) extends S3ObjectListingPublisher[S3ObjectSummary](req, s3) {
     import scala.collection.JavaConverters._
-    def mapListing(objectListing: ObjectListing) = objectListing.getObjectSummaries.asScala.toIterator
+    def mapListing(objectListing: ObjectListing): Iterator[S3ObjectSummary] = objectListing.getObjectSummaries.asScala.toIterator
   }
 
   class S3CommonPrefixesListingPublisher(req: ListObjectsRequest, s3: AmazonS3Client) extends S3ObjectListingPublisher[String](req, s3) {
     import scala.collection.JavaConverters._
-    def mapListing(objectListing: ObjectListing) = objectListing.getCommonPrefixes.asScala.toIterator
+    def mapListing(objectListing: ObjectListing): Iterator[String] = objectListing.getCommonPrefixes.asScala.toIterator
   }
 
 }

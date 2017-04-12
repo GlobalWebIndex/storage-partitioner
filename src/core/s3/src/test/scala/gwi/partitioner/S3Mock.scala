@@ -39,7 +39,7 @@ trait S3Mock extends AkkaSupport {
     Process(docker(s"rm -fv $randomName")).run()
   }
 
-  implicit lazy val s3Driver = {
+  implicit lazy val s3Driver: S3Driver = {
     val s3 = S3Driver("foo", "bar", "eu-west-1")
     s3.setEndpoint(s"http://localhost:$randomPort")
     s3.setS3ClientOptions(S3ClientOptions.builder().setPathStyleAccess(true).disableChunkedEncoding().build())

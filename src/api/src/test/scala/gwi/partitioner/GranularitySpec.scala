@@ -16,7 +16,7 @@ class GranularitySpec extends FreeSpec with Matchers {
   }
 
   "testNumIn" in {
-    val intervals = List(new TestInterval(2, 0, 0, 0, 0, 0, 0), new TestInterval(1, 2, 3, 4, 5, 6, 7), new TestInterval(4, 0, 0, 0, 0, 0, 0))
+    val intervals = List(TestInterval(2, 0, 0, 0, 0, 0, 0), TestInterval(1, 2, 3, 4, 5, 6, 7), TestInterval(4, 0, 0, 0, 0, 0, 0))
     intervals.foreach { testInterval =>
       val interval = testInterval.interval
       assertResult(testInterval.getMonths)(MONTH.numIn(interval))
@@ -110,13 +110,13 @@ class GranularitySpec extends FreeSpec with Matchers {
     private val start = new DateTime(2001, 1, 1, 0, 0, 0, 0)
     private val end = start.plusYears(years).plusMonths(months).plusDays(days).plusHours(hours).plusMinutes(minutes).plusSeconds(seconds).plusMillis(millis)
     val interval = new Interval(start, end)
-    def getYears = Years.yearsIn(interval).getYears
-    def getMonths = Months.monthsIn(interval).getMonths
-    def getWeeks = Weeks.weeksIn(interval).getWeeks
-    def getDays = Days.daysIn(interval).getDays
-    def getHours = Hours.hoursIn(interval).getHours
-    def getMinutes = Minutes.minutesIn(interval).getMinutes
-    def getSeconds = Seconds.secondsIn(interval).getSeconds
+    def getYears: Int   = Years.yearsIn(interval).getYears
+    def getMonths: Int  = Months.monthsIn(interval).getMonths
+    def getWeeks: Int   = Weeks.weeksIn(interval).getWeeks
+    def getDays: Int    = Days.daysIn(interval).getDays
+    def getHours: Int   = Hours.hoursIn(interval).getHours
+    def getMinutes: Int = Minutes.minutesIn(interval).getMinutes
+    def getSeconds: Int = Seconds.secondsIn(interval).getSeconds
   }
 
 }

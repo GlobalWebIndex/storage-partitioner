@@ -9,9 +9,6 @@ class S3TimePartitionerSpec extends FreeSpec with Matchers {
   import Granularity._
   private[this] val exception = new IllegalFieldValueException("","")
 
-  private[this] val bucket = "foo"
-  private[this] val path = "bar/"
-
   "test hour to date" in {
     assertPathToDate(HOUR, "2016/01/01/00/",                    "y=2016/m=01/d=01/H=00/",                        Some(Success(new DateTime(2016, 1, 1,  0, 0, 0, 0))))
     assertPathToDate(HOUR, "2011/03/15/20/50/43/Test0",         "y=2011/m=03/d=15/H=20/M=50/S=43/Test0",         Some(Success(new DateTime(2011, 3, 15, 20, 0, 0, 0))))

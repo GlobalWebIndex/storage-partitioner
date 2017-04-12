@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FreeSpec, Matchers}
 
 import scala.concurrent.Await
@@ -13,14 +12,14 @@ import scala.concurrent.duration._
 
 class S3DriverSpec extends FreeSpec with S3Mock with ScalaFutures with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  val bucket = "gwiq-views-t"
-  val basePath = "S3DriverSpec/"
+  private val bucket = "gwiq-views-t"
+  private val basePath = "S3DriverSpec/"
 
-  val testFile = File.createTempFile("test", ".txt")
-  val testFileContent = "lorem\nipsum"
+  private val testFile = File.createTempFile("test", ".txt")
+  private val testFileContent = "lorem\nipsum"
   Files.write(testFile.toPath, testFileContent.getBytes(StandardCharsets.UTF_8))
 
-  val testKeys = (10 to 60).filter(_ % 10 == 0).map(_.toString).flatMap(root => (1 to 3).map(basePath + root + "/" + _ + "/" + testFile.getName))
+  private val testKeys = (10 to 60).filter(_ % 10 == 0).map(_.toString).flatMap(root => (1 to 3).map(basePath + root + "/" + _ + "/" + testFile.getName))
 
   override def beforeAll(): Unit = try super.beforeAll() finally {
     startS3Container(testKeys.foreach( key => s3Driver.putObject(bucket, key, testFile) ))

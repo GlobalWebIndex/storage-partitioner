@@ -47,7 +47,7 @@ object S3TimeStorage {
           .foreach(driver.deleteObject(source.bucket, _))
       }
 
-      def indexData(partition: TimePartition, fileName: String, content: String) = {
+      def indexData(partition: TimePartition, fileName: String, content: String): Unit = {
         checkPermissions()
         val inputStream = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8))
         val metaData = new ObjectMetadata()

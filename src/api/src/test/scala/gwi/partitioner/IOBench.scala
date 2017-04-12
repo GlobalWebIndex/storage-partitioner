@@ -10,16 +10,16 @@ object IOBench extends Bench.OnlineRegressionReport {
 
   override def measurer = new Executor.Measurer.Default
 
-  val testFilePath = "target/IOBench.txt"
+  private val testFilePath = "target/IOBench.txt"
 
-  def writeFile(lines: Int) = {
+  private def writeFile(lines: Int) = {
     val testLine = "Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book."
     Files.write(Paths.get(testFilePath), IO.gzipByteArray((0 to lines).map(_ => testLine).mkString("", "\n", "\n").getBytes))
   }
 
-  def deleteFile() = Files.delete(Paths.get(testFilePath))
+  private def deleteFile() = Files.delete(Paths.get(testFilePath))
 
-  val execs = Seq[KeyValue](
+  private val execs = Seq[KeyValue](
     exec.benchRuns -> 3,
     exec.maxWarmupRuns -> 2,
     exec.independentSamples -> 2,
@@ -27,7 +27,7 @@ object IOBench extends Bench.OnlineRegressionReport {
     exec.jvmflags -> List("-server", "-Xms128m", "-Xmx256m", "-XX:+UseG1GC")
   )
 
-  def bench(name: String, gen: Gen[Int])(fn: (InputStream, Int) => Unit) = {
+  private def bench(name: String, gen: Gen[Int])(fn: (InputStream, Int) => Unit) = {
     performance of "stream" in {
       performance of name in {
         using(gen)

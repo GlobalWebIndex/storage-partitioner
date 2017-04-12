@@ -48,7 +48,7 @@ trait Granularity {
       private var currStart = truncate(inputInterval.getStart)
       private var currEnd = increment(currStart)
 
-      def hasNext = currStart.isBefore(inputInterval.getEnd)
+      def hasNext: Boolean = currStart.isBefore(inputInterval.getEnd)
 
       def next: Interval = {
         if (!hasNext) {
@@ -69,7 +69,7 @@ trait Granularity {
 
       def hasNext: Boolean = currEnd.isAfter(inputInterval.getStart)
 
-      def next = {
+      def next: Interval = {
         if (!hasNext) {
           throw new NoSuchElementException("There are no more intervals")
         }
@@ -103,9 +103,9 @@ object Granularity {
 
   case class Month(value: String) extends Granularity {
     def arity = 2
-    def getUnits(n: Int) = Months.months(n)
-    def numIn(interval: ReadableInterval) = Months.monthsIn(interval).getMonths
-    def truncate(time: DateTime) = {
+    def getUnits(n: Int): Months = Months.months(n)
+    def numIn(interval: ReadableInterval): Int = Months.monthsIn(interval).getMonths
+    def truncate(time: DateTime): DateTime = {
       val mutableDateTime = time.toMutableDateTime(ISOChronology.getInstanceUTC)
       mutableDateTime.setMillisOfDay(0)
       mutableDateTime.setDayOfMonth(1)
@@ -114,10 +114,10 @@ object Granularity {
   }
 
   case class Week(value: String) extends Granularity {
-    def arity = DAY.arity
-    def getUnits(n: Int) = Weeks.weeks(n)
-    def numIn(interval: ReadableInterval) = Weeks.weeksIn(interval).getWeeks
-    def truncate(time: DateTime) = {
+    def arity: Int = DAY.arity
+    def getUnits(n: Int): Weeks = Weeks.weeks(n)
+    def numIn(interval: ReadableInterval): Int = Weeks.weeksIn(interval).getWeeks
+    def truncate(time: DateTime): DateTime = {
       val mutableDateTime = time.toMutableDateTime(ISOChronology.getInstanceUTC)
       mutableDateTime.setMillisOfDay(0)
       mutableDateTime.setDayOfWeek(1)
@@ -127,7 +127,7 @@ object Granularity {
 
   case class Day(value: String) extends Granularity {
     def arity = 3
-    def getUnits(n: Int) = Days.days(n)
+    def getUnits(n: Int): Days = Days.days(n)
     def numIn(interval: ReadableInterval): Int = Days.daysIn(interval).getDays
     def truncate(time: DateTime): DateTime = {
       val mutableDateTime = time.toMutableDateTime(ISOChronology.getInstanceUTC)
@@ -138,8 +138,8 @@ object Granularity {
 
   case class Hour(value: String) extends Granularity {
     def arity = 4
-    def getUnits(n: Int) = Hours.hours(n)
-    def numIn(interval: ReadableInterval) = Hours.hoursIn(interval).getHours
+    def getUnits(n: Int): Hours = Hours.hours(n)
+    def numIn(interval: ReadableInterval): Int = Hours.hoursIn(interval).getHours
     def truncate(time: DateTime): DateTime = {
       val mutableDateTime = time.toMutableDateTime(ISOChronology.getInstanceUTC)
       mutableDateTime.setMillisOfSecond(0)
@@ -151,9 +151,9 @@ object Granularity {
 
   case class Minute(value: String) extends Granularity {
     def arity = 5
-    def getUnits(count: Int) = Minutes.minutes(count)
-    def numIn(interval: ReadableInterval) = Minutes.minutesIn(interval).getMinutes
-    def truncate(time: DateTime) = {
+    def getUnits(count: Int): Minutes = Minutes.minutes(count)
+    def numIn(interval: ReadableInterval): Int = Minutes.minutesIn(interval).getMinutes
+    def truncate(time: DateTime): DateTime = {
       val mutableDateTime = time.toMutableDateTime(ISOChronology.getInstanceUTC)
       mutableDateTime.setMillisOfSecond(0)
       mutableDateTime.setSecondOfMinute(0)
@@ -163,9 +163,9 @@ object Granularity {
 
   case class Second(value: String) extends Granularity {
     def arity = 6
-    def getUnits(count: Int) = Seconds.seconds(count)
-    def numIn(interval: ReadableInterval) = Seconds.secondsIn(interval).getSeconds
-    def truncate(time: DateTime) = {
+    def getUnits(count: Int): Seconds = Seconds.seconds(count)
+    def numIn(interval: ReadableInterval): Int = Seconds.secondsIn(interval).getSeconds
+    def truncate(time: DateTime): DateTime = {
       val mutableDateTime = time.toMutableDateTime(ISOChronology.getInstanceUTC)
       mutableDateTime.setMillisOfSecond(0)
       mutableDateTime.toDateTime(ISOChronology.getInstanceUTC)
