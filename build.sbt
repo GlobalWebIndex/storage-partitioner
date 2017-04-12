@@ -1,9 +1,8 @@
-import gwi.sbt.CommonPlugin
-import gwi.sbt.CommonPlugin.autoImport._
+
 
 crossScalaVersions in ThisBuild := Seq("2.11.8", "2.12.1")
 organization in ThisBuild := "net.globalwebindex"
-libraryDependencies in ThisBuild ++= Seq(monix) ++ jodaTime ++ testingDeps
+libraryDependencies in ThisBuild ++= Seq(monix) ++ akkaDeps ++ jodaTime ++ testingDeps
 
 lazy val `storage-partitioner` = (project in file("."))
   .aggregate(`storage-partitioner-api`, `storage-partitioner-s3`, `storage-partitioner-druid`, `storage-partitioner-all`)
@@ -19,7 +18,7 @@ lazy val `storage-partitioner-api` = (project in file("src/api"))
 lazy val `storage-partitioner-s3` = (project in file("src/core/s3"))
   .enablePlugins(CommonPlugin)
   .settings(name := "storage-partitioner-s3")
-  .settings(libraryDependencies ++= Seq(awsS3, "com.lightbend.akka" %% "akka-stream-alpakka-s3" % alpakkaVersion))
+  .settings(libraryDependencies ++= Seq(awsS3))
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-s3", s3Resolver))
   .dependsOn(
     `storage-partitioner-api` % "compile->compile;test->test"
@@ -31,7 +30,7 @@ lazy val `storage-partitioner-druid` = (project in file("src/core/druid"))
   .dependsOn(`storage-partitioner-api` % "compile->compile;test->test")
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-druid", s3Resolver))
   .dependsOn(
-    ProjectRef(uri("https://github.com/GlobalWebIndex/druid4s.git#v0.0.1"), "druid4s-client") % "compile->compile;test->test"
+    ProjectRef(uri("https://github.com/GlobalWebIndex/druid4s.git#v0.0.2"), "druid4s-client") % "compile->compile;test->test"
   )
 
 lazy val `storage-partitioner-all` = (project in file("src/all"))

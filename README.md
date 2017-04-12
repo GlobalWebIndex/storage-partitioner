@@ -14,11 +14,12 @@ dependsOn(ProjectRef(uri("https://github.com/GlobalWebIndex/storage-partitioner.
 dependsOn(ProjectRef(uri("https://github.com/GlobalWebIndex/storage-partitioner.git#vx.y.x"), "storage-partitioner-druid"))
 ```
 
-Abstraction of storages with partitioned data, currently only time series data is supported and implementation is provided
-for `s3` and `druid` storages.
+This project targets primarily storages like FS, S3, FTP, etc., that :
+  - do not have any kind of built-in partitioning like databases do
+  - cannot be searched easily, so that you want to reduce the area to be searched the hard way
 
-The purpose of this library is providing user with a unified interface for storage operations and hiding the storage implementation details
-from users that should only see partitions and data, not anything storage specific.
+Partitioning then must be implemented on client side for such storages and this is what this library helps with.
+Currently only time series data is supported and implementation is provided for `s3`, `ftp` and `druid` storages.
 
 When building an `ETL` pipeline that extracts and loads data with the same partitioning between various storage types, the user
 must focus on `Transform` instead of `Extract` and `Load`.
