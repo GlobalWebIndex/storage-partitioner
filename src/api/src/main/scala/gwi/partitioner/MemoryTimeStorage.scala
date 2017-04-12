@@ -6,10 +6,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 
 case class MemorySource(access: String, partitions: Seq[TimePartition], properties: Map[String, String]) extends StorageSource
-case class MemoryTimeStorage(id: String, source: MemorySource, partitioner: IdentityTimePartitioner) extends TimeStorage[MemorySource,IdentityTimePartitioner,TimeClient] {
-  type OUT = IdentityPointer
-  def lift(p: TimePartition): IdentityPointer = IdentityPointer(p.value.toString)
-}
+case class MemoryTimeStorage(id: String, source: MemorySource, partitioner: PlainTimePartitioner) extends TimeStorage[MemorySource,PlainTimePartitioner,TimeClient]
 
 object MemoryTimeStorage {
   implicit class MemoryTimeStoragePimp(underlying: MemoryTimeStorage) {
