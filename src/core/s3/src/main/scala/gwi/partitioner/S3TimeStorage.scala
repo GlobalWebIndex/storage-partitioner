@@ -16,14 +16,12 @@ import scala.util.Try
 case class S3Source(bucket: String, path: String, access: String, properties: Map[String,String]) extends StorageSource {
   require(path.endsWith("/"), s"By convention, s3 paths must end with delimiter otherwise the key doesn't represent a directory, $path is invalid !!!")
 }
+
 case class S3TimeStorage(id: String, source: S3Source, partitioner: S3TimePartitioner) extends TimeStorage[S3Source, S3TimePartitioner, S3TimeClient] {
-  type OUT = S3TimePath
-  def lift(d: DateTime): S3TimePath = S3TimePath(source.bucket, source.path, partitioner.lift(d))
-  def lift(p: TimePartition): S3TimePath = lift(p.value)
-  def lift(i: Interval): S3TimePath = {
-    require(partitioner.granularity.getIterable(i).size == 1)
-    lift(i.getStart)
-  }
+  def liftMany(i: Interval): Iterable[S3TimePartition] = partitioner.buildMany(i).map(lift)
+  def lift(p: TimePartition): S3TimePartition = lift(p.value)
+  def lift(start: DateTime): S3TimePartition = S3TimePartition(source.bucket, source.path, partitioner.dateToPath(start), partitioner.granularity.bucket(start))
+  def lift(i: Interval): S3TimePartition = lift(i.getStart)
 }
 
 object S3TimeStorage {
@@ -44,9 +42,8 @@ object S3TimeStorage {
 
       def delete(partition: TimePartition): Unit = {
         checkPermissions()
-        val pointer = underlying.lift(partition)
         driver
-          .listKeys(pointer.bucket, pointer.partitionKey)
+          .listKeys(source.bucket, underlying.lift(partition.value).partitionKey)
           .foreach(driver.deleteObject(source.bucket, _))
       }
 
@@ -55,18 +52,18 @@ object S3TimeStorage {
         val inputStream = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8))
         val metaData = new ObjectMetadata()
         metaData.setContentLength(content.length)
-        driver.putObject(source.bucket, underlying.lift(partition).partitionFileKey(fileName), inputStream, metaData)
+        driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(fileName), inputStream, metaData)
       }
 
       def markWithSuccess(partition: TimePartition): Unit = {
-        driver.putObject(source.bucket, underlying.lift(partition).partitionFileKey(successFile.getName), successFile)
+        driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(successFile.getName), successFile)
       }
 
       def list: Future[Seq[TimePartition]] =
         list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))
 
-      def list(range: Interval): Future[Seq[TimePartition]] = {
-        def timePath(time: DateTime) = partitioner.lift(time).split("/").filter(_.nonEmpty)
+      def list(range: Interval): Future[Vector[TimePartition]] = {
+        def timePath(time: DateTime) = partitioner.dateToPath(time).split("/").filter(_.nonEmpty)
         val commonAncestorList =
           timePath(range.getStart).zip(timePath(range.getEnd))
             .takeWhile(p => p._1 == p._2)
@@ -74,16 +71,15 @@ object S3TimeStorage {
 
         val storagePrefix = s"${source.path}${commonAncestorList.mkString("/")}"
         val pathDepth = partitioner.granularity.arity - commonAncestorList.length
-        def isValidPartition(timePath: S3TimePath) = driver.doesObjectExist(source.bucket, timePath.partitionFileKey(".success"))
+        def isValidPartition(timePath: S3TimePartition) = driver.doesObjectExist(source.bucket, timePath.partitionFileKey(".success"))
 
         driver.getRelativeDirPaths(source.bucket, storagePrefix, pathDepth, "/")
           .map { s3DirPaths =>
             s3DirPaths
               .map(commonAncestorList ++ _)
-              .map(arr => S3TimePath(source.bucket, source.path, arr.mkString("", "/", "/")))
-              .map(path => path -> partitioner.deconstruct(path).get)
-              .collect { case (path, partition) if range.contains(partition.value.getStart) && isValidPartition(path) => partition }
-              .sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) > 1 }
+              .map(arr => underlying.lift(underlying.partitioner.pathToInterval(arr.mkString("", "/", "/"))))
+              .collect { case path if range.contains(path.value) && isValidPartition(path) => path }
+              .sortWith { case (x, y) => x.interval.getStart.compareTo(y.interval.getStart) > 1 }
               .toVector
           }(ExecutionContext.Implicits.global)
       }
@@ -92,60 +88,31 @@ object S3TimeStorage {
 }
 
 trait S3TimeClient extends TimeClient {
-  type OUT = S3TimePath
   def indexData(partition: TimePartition, fileName: String, content: String): Unit
 }
 
-case class S3TimePath(bucket: String, path: String, timePath: String) extends Pointer {
+case class S3TimePartition(bucket: String, path: String, timePath: String, interval: Interval) extends TimePartition(interval) {
   def partitionKey: String = path + timePath
   def partitionFileKey(name: String): String = path + timePath + name
 }
 
-case class S3TimePartitioner(granularity: Granularity, private val pathFormat: Option[String], private val pathPattern: Option[String]) extends TimePartitioner {
-  type OUT = S3TimePath
-  type S = S3Source
+case class S3TimePartitioner(granularity: Granularity, private val pathFormat: Option[String], private val pathPattern: Option[String]) extends TimePartitioner with TimePartitionBuilders {
   private[this] val pathFormatter = DateTimeFormat.forPattern(pathFormat.getOrElse(S3TimePartitioner.PlainPathFormat).split("/").take(granularity.arity).mkString("/"))
   private[this] val compiledPathPattern = Pattern.compile(pathPattern.getOrElse(S3TimePartitioner.PlainPathPattern))
 
-  def lift(dateTime: DateTime): String = pathFormatter.print(dateTime) + "/"
-
-  def deconstruct(path: S3TimePath): Option[TimePartition] = {
-    val matcher = compiledPathPattern.matcher(path.timePath)
+  def dateToPath(dateTime: DateTime): String = pathFormatter.print(dateTime) + "/"
+  def getPathFormat: String = pathFormat.getOrElse(S3TimePartitioner.PlainPathFormat).split("/").take(granularity.arity).mkString("/")
+  def pathToInterval(timePath: String): Interval = {
+    val matcher = compiledPathPattern.matcher(timePath)
     def group(i: Int): Option[Int] = Try(matcher.group(i)).map(Option(_).map(_.toInt)).getOrElse(None)
     Option(matcher.matches())
       .filter(identity)
-      .map ( _ => Array(group(1),group(2),group(3),group(4),group(5),group(6)) )
+      .map(_ => Array(group(1), group(2), group(3), group(4), group(5), group(6)))
       .collect { case dateVals if dateVals.takeWhile(_.isDefined).length >= granularity.arity =>
-        val dv = (0 to 5).map( i => if (i < granularity.arity) dateVals(i).get else 0 )
-        buildPartition(granularity.bucket(new DateTime(dv(0), dv(1), dv(2), dv(3), dv(4), dv(5), DateTimeZone.UTC)))
-      }
+        val dv = (0 to 5).map(i => if (i < granularity.arity) dateVals(i).get else 0)
+        granularity.bucket(new DateTime(dv(0), dv(1), dv(2), dv(3), dv(4), dv(5), DateTimeZone.UTC))
+      }.getOrElse(throw new IllegalArgumentException(s"TimePath $timePath is not valid !!!"))
   }
-
-  def getPathFormat: String = pathFormat.getOrElse(S3TimePartitioner.PlainPathFormat).split("/").take(granularity.arity).mkString("/")
-
-/*
-  def buildPartition(s3Url: String): Option[S3TimePath] = {
-    Option(s3Url.startsWith("s3://") && s3Url.endsWith("/"))
-      .filter(identity)
-      .flatMap { _ =>
-        val s3UrlParts = s3Url.stripPrefix("s3://").stripSuffix("/").split("/")
-        val bucket = s3UrlParts.head
-        val path = s3UrlParts.tail.mkString("", "/", "/")
-        val matcher = compiledPathPattern.matcher(path)
-        def group(i: Int): Option[Int] = Try(matcher.group(i)).map(Option(_).map(_.toInt)).getOrElse(None)
-        Option(matcher.matches())
-          .filter(identity)
-          .map ( _ => Array(group(1),group(2),group(3),group(4),group(5),group(6)) )
-          .collect { case dateVals if dateVals.takeWhile(_.isDefined).length >= granularity.arity =>
-            val dv = (0 to 5).map( i => if (i < granularity.arity) dateVals(i).get else 0 )
-            val interval = granularity.bucket(new DateTime(dv(0), dv(1), dv(2), dv(3), dv(4), dv(5), DateTimeZone.UTC))
-            val timePath = dateToPath(interval.getStart)
-            val basePath = path.stripSuffix(timePath)
-            S3TimePath(bucket, basePath, timePath, interval)
-          }
-      }
-  }
-*/
 
 }
 

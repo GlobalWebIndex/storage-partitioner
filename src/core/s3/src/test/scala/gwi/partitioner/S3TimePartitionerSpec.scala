@@ -58,14 +58,14 @@ class S3TimePartitionerSpec extends FreeSpec with Matchers {
     val qualifiedP = S3TimePartitioner.qualified(granularity)
     dateTime match {
       case None =>
-        assertResult(None)(plainP.deconstruct(S3TimePath(bucket, path, plainPath)))
-        assertResult(None)(qualifiedP.deconstruct(S3TimePath(bucket, path, qualifiedPath)))
+        assertThrows[IllegalArgumentException](plainP.pathToInterval(plainPath))
+        assertThrows[IllegalArgumentException](qualifiedP.pathToInterval(qualifiedPath))
       case Some(Success(date)) =>
-        assertResult(granularity.bucket(date))(plainP.deconstruct(S3TimePath(bucket, path, plainPath)).get.value)
-        assertResult(granularity.bucket(date))(qualifiedP.deconstruct(S3TimePath(bucket, path, qualifiedPath)).get.value)
+        assertResult(granularity.bucket(date))(plainP.pathToInterval(plainPath))
+        assertResult(granularity.bucket(date))(qualifiedP.pathToInterval(qualifiedPath))
       case Some(Failure(ex)) =>
-        assertThrows[IllegalFieldValueException](plainP.deconstruct(S3TimePath(bucket, path, plainPath)))
-        assertThrows[IllegalFieldValueException](qualifiedP.deconstruct(S3TimePath(bucket, path, qualifiedPath)))
+        assertThrows[IllegalFieldValueException](plainP.pathToInterval(plainPath))
+        assertThrows[IllegalFieldValueException](qualifiedP.pathToInterval(qualifiedPath))
     }
   }
 
