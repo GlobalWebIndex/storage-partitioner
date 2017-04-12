@@ -1,33 +1,34 @@
 package gwi.partitioner
 
-import org.joda.time.Interval
-import org.joda.time.chrono.ISOChronology
+import org.joda.time.{DateTime, Interval}
 
 import scala.concurrent.Future
 
-case class TimePartition(value: Interval) extends StoragePartition[Interval]
+class TimePartition(val value: Interval) extends StoragePartition[Interval]
 
 trait TimeClient extends StorageClient[Interval,TimePartition] {
   def list(range: Interval): Future[Seq[TimePartition]]
 }
 
-trait TimePartitioner extends Partitioner[Interval,TimePartition] {
+trait TimePartitioner extends Partitioner[Interval] {
+  type SP <: TimePartition
   def granularity: Granularity
-  def buildPartitions(p: Interval): Iterable[TimePartition] =
-    granularity.getIterable(p).map(buildPartition)
-  def buildPartition(p: Interval): TimePartition =
-    TimePartition(p)
-  def buildPartition(p: String): TimePartition =
-    TimePartition(new Interval(p, ISOChronology.getInstanceUTC))
+  def build(i: Interval): SP
+  def build(start: DateTime): SP
+  def buildMany(i: Interval): Iterable[SP]
 }
 
-case class IdentityPointer(value: String) extends Pointer
-
-case class IdentityTimePartitioner(granularity: Granularity) extends TimePartitioner {
-  type OUT = IdentityPointer
-  type S = StorageSource
-  def deconstruct(p: IdentityPointer) = Option(buildPartition(p.value))
+trait TimePartitionBuilders extends TimePartitioner {
+  type SP = TimePartition
+  def build(start: DateTime): TimePartition = new TimePartition(granularity.bucket(start))
+  def build(i: Interval): TimePartition = {
+    require(granularity.getIterable(i).size == 1)
+    build(i.getStart)
+  }
+  def buildMany(i: Interval): Iterable[TimePartition] = granularity.getIterable(i).map(build)
 }
+
+case class PlainTimePartitioner(granularity: Granularity) extends TimePartitioner with TimePartitionBuilders
 
 trait TimeStorage[S <: StorageSource, TPR <: TimePartitioner, C <: TimeClient] extends Storage[S] {
   type IN = Interval
