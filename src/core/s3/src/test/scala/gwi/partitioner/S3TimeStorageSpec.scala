@@ -14,7 +14,7 @@ class S3TimeStorageSpec extends FreeSpec with S3Mock with ScalaFutures with Matc
   private[this] val source = S3Source(bucket, path, "rw", Map.empty)
   private[this] val plainStorage = S3TimeStorage("foo", source, S3TimePartitioner.plain(Granularity.HOUR))
   private[this] val qualifiedStorage = S3TimeStorage("foo", source, S3TimePartitioner.qualified(Granularity.HOUR))
-  private[this] val partitions = plainStorage.liftMany(new Interval(new DateTime(2016, 1, 1, 22, 0, 0, DateTimeZone.UTC), new DateTime(2016, 1, 2, 5, 0, 0, DateTimeZone.UTC))).toVector
+  private[this] val partitions = plainStorage.liftMany(new Interval(new DateTime(2016, 1, 1, 22, 0, 0, DateTimeZone.UTC), new DateTime(2016, 1, 2, 5, 0, 0, DateTimeZone.UTC))).toVector.sortBy(_.value.toString)
 
   private[this] def createStorage(storage: S3TimeStorage, partitions: Iterable[TimePartition]): Unit = {
     val client = storage.client
@@ -25,7 +25,10 @@ class S3TimeStorageSpec extends FreeSpec with S3Mock with ScalaFutures with Matc
   }
 
   override def beforeAll(): Unit = try super.beforeAll() finally {
-    startS3Container(createStorage(plainStorage, partitions))
+    startS3Container {
+      s3Driver.createBucket(bucket)
+      createStorage(plainStorage, partitions)
+    }
   }
 
   override def afterAll(): Unit = try super.afterAll() finally {
@@ -39,13 +42,13 @@ class S3TimeStorageSpec extends FreeSpec with S3Mock with ScalaFutures with Matc
     }
     "list partitions" in {
       whenReady(plainStorage.client.list) { actualPartitions =>
-        assertResult(partitions)(actualPartitions)
+        assertResult(partitions)(actualPartitions.sortBy(_.value.toString))
       }
     }
     "delete partitions" in {
       plainStorage.client.delete(partitions.head)
       whenReady(plainStorage.client.list) { actualPartitions =>
-        assertResult(partitions.tail)(actualPartitions)
+        assertResult(partitions.tail)(actualPartitions.sortBy(_.value.toString))
       }
     }
   }

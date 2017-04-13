@@ -22,7 +22,10 @@ class S3DriverSpec extends FreeSpec with S3Mock with ScalaFutures with Matchers 
   private val testKeys = (10 to 60).filter(_ % 10 == 0).map(_.toString).flatMap(root => (1 to 3).map(basePath + root + "/" + _ + "/" + testFile.getName))
 
   override def beforeAll(): Unit = try super.beforeAll() finally {
-    startS3Container(testKeys.foreach( key => s3Driver.putObject(bucket, key, testFile) ))
+    startS3Container {
+      s3Driver.createBucket(bucket)
+      testKeys.foreach(key => s3Driver.putObject(bucket, key, testFile))
+    }
   }
 
   override def afterAll(): Unit = try super.afterAll() finally {
@@ -37,8 +40,8 @@ class S3DriverSpec extends FreeSpec with S3Mock with ScalaFutures with Matchers 
     }
 
     "common prefixes" in {
-      val expected = (10 to 60).filter(_ % 10 == 0).map(int => s"$basePath$int/")
-      val actual = s3Driver.commonPrefixSource(bucket, basePath, "/", 100)
+      val expected = (10 to 60).filter(_ % 10 == 0).map(int => s"$basePath$int/").sorted
+      val actual = s3Driver.commonPrefixSource(bucket, basePath, "/", 100).sorted
       assertResult(expected)(actual)
     }
 
