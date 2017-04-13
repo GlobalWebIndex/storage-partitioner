@@ -1,5 +1,5 @@
 
-
+version in ThisBuild := "0.0.2"
 crossScalaVersions in ThisBuild := Seq("2.11.8", "2.12.1")
 organization in ThisBuild := "net.globalwebindex"
 libraryDependencies in ThisBuild ++= Seq(monix) ++ akkaDeps ++ jodaTime ++ testingDeps
