@@ -2,7 +2,7 @@
 version in ThisBuild := "0.0.2"
 crossScalaVersions in ThisBuild := Seq("2.11.8", "2.12.1")
 organization in ThisBuild := "net.globalwebindex"
-libraryDependencies in ThisBuild ++= Seq(monix) ++ akkaDeps ++ jodaTime ++ testingDeps
+libraryDependencies in ThisBuild ++= Seq(monix, akkaActor, akkaStream, scalatest, scalameter) ++ jodaTime
 
 lazy val `storage-partitioner` = (project in file("."))
   .aggregate(`storage-partitioner-api`, `storage-partitioner-s3`, `storage-partitioner-druid`, `storage-partitioner-all`)
@@ -18,7 +18,7 @@ lazy val `storage-partitioner-api` = (project in file("src/api"))
 lazy val `storage-partitioner-s3` = (project in file("src/core/s3"))
   .enablePlugins(CommonPlugin)
   .settings(name := "storage-partitioner-s3")
-  .settings(libraryDependencies ++= Seq(awsS3))
+  .settings(libraryDependencies ++= Seq(awsS3, alpakkaS3, s3mock))
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-s3", s3Resolver))
   .dependsOn(
     `storage-partitioner-api` % "compile->compile;test->test"
