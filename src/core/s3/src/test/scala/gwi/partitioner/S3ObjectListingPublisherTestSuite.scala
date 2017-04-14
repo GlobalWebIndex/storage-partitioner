@@ -4,8 +4,8 @@ import java.io.File
 
 import akka.stream.scaladsl.Sink
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.{FreeSpec, Matchers}
 import org.scalatest.time.{Seconds, Span}
+import org.scalatest.{FreeSpec, Matchers}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -20,6 +20,7 @@ class S3ObjectListingPublisherTestSuite extends FreeSpec with ScalaFutures with 
 
   override def beforeAll(): Unit = try super.beforeAll() finally {
     startS3Container {
+      s3Driver.createBucket(bucket)
       testKeys.foreach( key => s3Driver.putObject(bucket, key, testFile) )
     }
   }
