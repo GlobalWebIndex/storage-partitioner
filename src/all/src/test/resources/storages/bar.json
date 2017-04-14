@@ -3,8 +3,8 @@
   "source": {
     "dataSource": "bar",
     "coordinator": "${USER}",
-    "overlord": "${LANGUAGE}",
-    "broker": "${SCALA_HOME}",
+    "overlord": "${USER}",
+    "broker": "${USER}",
     "access": "rw",
     "properties": {
 
