@@ -10,7 +10,7 @@ import org.scalatest.{FreeSpec, Matchers}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class S3ObjectListingPublisherTestSuite extends FreeSpec with ScalaFutures with Matchers with S3Mock with AkkaSupport {
+class S3ObjectListingPublisherTestSuite extends FreeSpec with ScalaFutures with Matchers with FakeS3 with AkkaSupport {
   implicit val futurePatience = PatienceConfig(Span(10, Seconds), Span(2, Seconds))
 
   private val bucket = "gwiq-views-t"

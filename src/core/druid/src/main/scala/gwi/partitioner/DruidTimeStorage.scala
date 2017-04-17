@@ -1,11 +1,10 @@
 package gwi.partitioner
 
-import gwi.druid.client.DruidClient
 import org.joda.time.chrono.ISOChronology
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 
 case class DruidSource(dataSource: String, coordinator: String, overlord: String, broker: String, access: String, properties: Map[String,String]) extends StorageSource
@@ -19,7 +18,7 @@ object DruidTimeStorage {
 
       def delete(partition: TimePartition): Unit = {} //deleting segments is not real-time, ie. delete & create of the same partition would not have deterministic outcome
 
-      def markWithSuccess(partition: TimePartition): Unit = {} // done by druid
+      def markWithSuccess(partition: TimePartition, content: String): Unit = {} // done by druid
 
       def list: Future[Seq[TimePartition]] =
         list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))

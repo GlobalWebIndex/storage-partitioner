@@ -5,7 +5,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FreeSpec, Matchers}
 
-class S3TimeStorageSpec extends FreeSpec with S3Mock with ScalaFutures with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   implicit val futurePatience = PatienceConfig(timeout = Span(5, Seconds), interval = Span(500, Millis))
 
@@ -20,7 +20,7 @@ class S3TimeStorageSpec extends FreeSpec with S3Mock with ScalaFutures with Matc
     val client = storage.client
     partitions.foreach { partition =>
       client.indexData(partition, "test.json", s"""{"timestamp":"${partition.value.getStart.toString}", "foo":"bar"}""")
-      client.markWithSuccess(partition)
+      client.markWithSuccess(partition, "version-foo")
     }
   }
 
@@ -43,6 +43,9 @@ class S3TimeStorageSpec extends FreeSpec with S3Mock with ScalaFutures with Matc
     "list partitions" in {
       whenReady(plainStorage.client.list) { actualPartitions =>
         assertResult(partitions)(actualPartitions.sortBy(_.value.toString))
+        actualPartitions.map(plainStorage.lift).map(_.partitionFileKey(S3TimeStorage.SuccessFileName)).foreach { successFileKey =>
+          assertResult("version-foo")(s3Driver.readObjectStreamAsString(bucket, successFileKey, 128))
+        }
       }
     }
     "delete partitions" in {

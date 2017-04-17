@@ -10,7 +10,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FreeSpec, Matchers}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class S3DriverSpec extends FreeSpec with S3Mock with ScalaFutures with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class S3DriverSpec extends FreeSpec with FakeS3 with ScalaFutures with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   private val bucket = "gwiq-views-t"
   private val basePath = "S3DriverSpec/"

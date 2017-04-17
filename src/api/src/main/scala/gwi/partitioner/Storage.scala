@@ -8,7 +8,7 @@ trait StoragePartition[P] {
 
 trait StorageClient[IN,SP <: StoragePartition[IN]] {
   def delete(partition: SP): Unit
-  def markWithSuccess(partition: SP): Unit
+  def markWithSuccess(partition: SP, content: String): Unit
   def list: Future[Seq[SP]]
 }
 

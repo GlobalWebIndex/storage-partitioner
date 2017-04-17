@@ -13,7 +13,7 @@ object MemoryTimeStorage {
     def client = new TimeClient {
       private var state: Map[TimePartition, Boolean] = underlying.source.partitions.map(_ -> true).toMap
       def delete(partition: TimePartition): Unit = state = state - partition
-      def markWithSuccess(partition: TimePartition): Unit = state = state.updated(partition, true)
+      def markWithSuccess(partition: TimePartition, content: String): Unit = state = state.updated(partition, true)
       def list: Future[Seq[TimePartition]] = Future(state.keys.toSeq)(ExecutionContext.Implicits.global)
       def list(range: Interval): Future[Seq[TimePartition]] = list.map(_.filter(p => range.contains(p.value)))(ExecutionContext.Implicits.global)
     }

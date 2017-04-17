@@ -1,6 +1,6 @@
 
-version in ThisBuild := "0.0.2"
-crossScalaVersions in ThisBuild := Seq("2.11.8", "2.12.1")
+version in ThisBuild := "0.0.3"
+crossScalaVersions in ThisBuild := Seq("2.12.1", "2.11.8")
 organization in ThisBuild := "net.globalwebindex"
 libraryDependencies in ThisBuild ++= Seq(monix, akkaActor, akkaStream, scalatest, scalameter) ++ jodaTime
 

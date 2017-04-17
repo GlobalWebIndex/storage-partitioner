@@ -1,8 +1,7 @@
 package gwi.partitioner
 
-import java.io.{ByteArrayInputStream, File}
+import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, StandardOpenOption}
 import java.util.regex.Pattern
 
 import com.amazonaws.services.s3.model.ObjectMetadata
@@ -25,18 +24,12 @@ case class S3TimeStorage(id: String, source: S3Source, partitioner: S3TimePartit
 }
 
 object S3TimeStorage {
+  val SuccessFileName = ".success"
 
   implicit class S3TimeStoragePimp(underlying: S3TimeStorage) {
 
     def client(implicit driver: S3Driver) = new S3TimeClient {
       private val S3TimeStorage(_, source, partitioner) = underlying
-      private val successFile = {
-        val tmpFile = new File(sys.props("java.io.tmpdir") + "/.success")
-        tmpFile.delete()
-        val version = s"${BuildInfo.name}-${BuildInfo.version}"
-        Files.write(tmpFile.toPath, version.getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE)
-        tmpFile
-      }
 
       private def checkPermissions() = require(source.access.contains("w"), s"s3://${source.bucket}/${source.path} has not write permissions !!!")
 
@@ -55,8 +48,8 @@ object S3TimeStorage {
         driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(fileName), inputStream, metaData)
       }
 
-      def markWithSuccess(partition: TimePartition): Unit = {
-        driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(successFile.getName), successFile)
+      def markWithSuccess(partition: TimePartition, content: String): Unit = {
+        driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(SuccessFileName), content)
       }
 
       def list: Future[Seq[TimePartition]] =
@@ -71,7 +64,7 @@ object S3TimeStorage {
 
         val storagePrefix = s"${source.path}${commonAncestorList.mkString("/")}"
         val pathDepth = partitioner.granularity.arity - commonAncestorList.length
-        def isValidPartition(timePath: S3TimePartition) = driver.doesObjectExist(source.bucket, timePath.partitionFileKey(".success"))
+        def isValidPartition(timePath: S3TimePartition) = driver.doesObjectExist(source.bucket, timePath.partitionFileKey(SuccessFileName))
 
         driver.getRelativeDirPaths(source.bucket, storagePrefix, pathDepth, "/")
           .map { s3DirPaths =>
