@@ -1,5 +1,6 @@
 package gwi.partitioner
 
+import gwi.druid.client.DruidClient
 import org.joda.time.chrono.ISOChronology
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 

@@ -8,12 +8,9 @@ lazy val `storage-partitioner` = (project in file("."))
   .aggregate(`storage-partitioner-api`, `storage-partitioner-s3`, `storage-partitioner-druid`, `storage-partitioner-all`)
 
 lazy val `storage-partitioner-api` = (project in file("src/api"))
-  .enablePlugins(CommonPlugin, BuildInfoPlugin)
+  .enablePlugins(CommonPlugin)
   .settings(name := "storage-partitioner-api")
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-api", s3Resolver))
-  .settings(buildInfoKeys := Seq[BuildInfoKey](name, version))
-  .settings(buildInfoOptions ++= Seq(BuildInfoOption.ToJson))
-  .settings(buildInfoPackage := "gwi.partitioner")
 
 lazy val `storage-partitioner-s3` = (project in file("src/core/s3"))
   .enablePlugins(CommonPlugin)
