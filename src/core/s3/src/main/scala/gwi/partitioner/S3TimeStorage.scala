@@ -14,7 +14,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 import scala.util.Try
 
-case class S3Source(bucket: String, path: String, access: String, properties: Map[String,String]) extends StorageSource {
+case class S3Source(bucket: String, path: String, access: String, meta: Set[String], properties: Map[String,String]) extends StorageSource {
   require(path.endsWith("/"), s"By convention, s3 paths must end with delimiter otherwise the key doesn't represent a directory, $path is invalid !!!")
 }
 
@@ -51,14 +51,14 @@ object S3TimeStorage {
         driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(fileName), inputStream, metaData)
       }
 
-      def markWithSuccess(partition: TimePartition, meta: List[String]): Future[Done] =
-        Future(driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(SuccessFileName), meta.mkString("","\n","\n")))(Implicits.global)
+      def markWithSuccess(partition: TimePartition): Future[Done] =
+        Future(driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(SuccessFileName), source.meta.mkString("","\n","\n")))(Implicits.global)
           .map(_ => Done)(Implicits.global)
 
-      def listAll(meta: Set[String]): Future[Seq[TimePartition]] =
-        list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))), meta)
+      def listAll: Future[Seq[TimePartition]] =
+        list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))
 
-      def list(range: Interval, meta: Set[String]): Future[Vector[TimePartition]] = {
+      def list(range: Interval): Future[Vector[TimePartition]] = {
         def timePath(time: DateTime) = partitioner.dateToPath(time).split("/").filter(_.nonEmpty)
         val commonAncestorList =
           timePath(range.getStart).zip(timePath(range.getEnd))

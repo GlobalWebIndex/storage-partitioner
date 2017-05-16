@@ -4,6 +4,7 @@
     "bucket": "bar",
     "path": "baz/",
     "access": "rw",
+    "meta": ["version-foo"],
     "properties": {
 
     }

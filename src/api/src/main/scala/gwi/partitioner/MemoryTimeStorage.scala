@@ -6,7 +6,7 @@ import org.joda.time.Interval
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 
-case class MemorySource(access: String, partitions: Seq[TimePartition], properties: Map[String, String]) extends StorageSource
+case class MemorySource(access: String, meta: Set[String], partitions: Seq[TimePartition], properties: Map[String, String]) extends StorageSource
 case class MemoryTimeStorage(id: String, source: MemorySource, partitioner: PlainTimePartitioner) extends TimeStorage[MemorySource,PlainTimePartitioner,TimeClient]
 
 object MemoryTimeStorage {
@@ -17,12 +17,12 @@ object MemoryTimeStorage {
         state = state - partition
         Future.successful(Done.getInstance())
       }
-      def markWithSuccess(partition: TimePartition, meta: List[String]): Future[Done] = {
+      def markWithSuccess(partition: TimePartition): Future[Done] = {
         state = state.updated(partition, true)
         Future.successful(Done.getInstance())
       }
-      def listAll(meta: Set[String]): Future[Seq[TimePartition]] = Future(state.keys.toSeq)(ExecutionContext.Implicits.global)
-      def list(range: Interval, meta: Set[String] = Set.empty): Future[Seq[TimePartition]] = listAll(meta).map(_.filter(p => range.contains(p.value)))(ExecutionContext.Implicits.global)
+      def listAll: Future[Seq[TimePartition]] = Future(state.keys.toSeq)(ExecutionContext.Implicits.global)
+      def list(range: Interval): Future[Seq[TimePartition]] = listAll.map(_.filter(p => range.contains(p.value)))(ExecutionContext.Implicits.global)
     }
   }
 }

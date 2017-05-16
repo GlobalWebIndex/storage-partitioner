@@ -5,9 +5,9 @@ import org.scalatest._
 
 class StorageSpec extends FreeSpec with StorageCodec with AkkaSupport with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
-  val s3S = S3TimeStorage("foo", S3Source("bar", "baz/", "rw", Map.empty), S3TimePartitioner.plain(Granularity.HOUR))
-  val druidS = DruidTimeStorage("foo", DruidSource("bar", "baz", "fuz", "huz", "rw", Map.empty), PlainTimePartitioner(Granularity.HOUR))
-  val memS = MemoryTimeStorage("foo", new MemorySource("rw", Seq.empty, Map.empty), PlainTimePartitioner(Granularity.HOUR))
+  val s3S = S3TimeStorage("foo", S3Source("bar", "baz/", "rw", Set("version-foo"), Map.empty), S3TimePartitioner.plain(Granularity.HOUR))
+  val druidS = DruidTimeStorage("foo", DruidSource("bar", "baz", "fuz", "huz", "rw", Set("version-foo"), Map.empty), PlainTimePartitioner(Granularity.HOUR))
+  val memS = MemoryTimeStorage("foo", new MemorySource("rw", Set("version-foo"), Seq.empty, Map.empty), PlainTimePartitioner(Granularity.HOUR))
 
   implicit val s3 = S3Driver("x","y","eu-west-1")
   implicit val druid = DruidClient

@@ -9,7 +9,7 @@ import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 
-case class DruidSource(dataSource: String, coordinator: String, overlord: String, broker: String, access: String, properties: Map[String,String]) extends StorageSource
+case class DruidSource(dataSource: String, coordinator: String, overlord: String, broker: String, access: String, meta: Set[String], properties: Map[String,String]) extends StorageSource
 
 case class DruidTimeStorage(id: String, source: DruidSource, partitioner: PlainTimePartitioner) extends TimeStorage[DruidSource, PlainTimePartitioner, TimeClient]
 
@@ -20,12 +20,12 @@ object DruidTimeStorage {
 
       def delete(partition: TimePartition): Future[Done] = Future.successful(Done.getInstance()) //deleting segments is not real-time, ie. delete & create of the same partition would not have deterministic outcome
 
-      def markWithSuccess(partition: TimePartition, meta: List[String]): Future[Done] = Future.successful(Done.getInstance()) // done by druid
+      def markWithSuccess(partition: TimePartition): Future[Done] = Future.successful(Done.getInstance()) // done by druid
 
-      def listAll(meta: Set[String]): Future[Seq[TimePartition]] =
-        list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))), meta)
+      def listAll: Future[Seq[TimePartition]] =
+        list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))
 
-      def list(range: Interval, meta: Set[String]): Future[Seq[TimePartition]] = {
+      def list(range: Interval): Future[Seq[TimePartition]] = {
         Future {
           driver.forQueryingCoordinator(source.coordinator)(10.seconds, 1.minute)
             .listDataSourceIntervals(source.dataSource).get

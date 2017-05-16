@@ -9,8 +9,8 @@ trait StorageCodec extends DefaultJsonProtocol {
     def read(value: JsValue) = Granularity(value.asInstanceOf[JsString].value)
   }
 
-  private[this] implicit val s3Source                 = jsonFormat4(S3Source.apply)
-  private[this] implicit val druidSource              = jsonFormat6(DruidSource.apply)
+  private[this] implicit val s3Source                 = jsonFormat5(S3Source.apply)
+  private[this] implicit val druidSource              = jsonFormat7(DruidSource.apply)
   private[this] implicit val timePathPartitioner      = jsonFormat(S3TimePartitioner.apply, "granularity", "pathFormat", "pathPattern")
   private[this] implicit val plainTimePartitioner     = jsonFormat1(PlainTimePartitioner)
 

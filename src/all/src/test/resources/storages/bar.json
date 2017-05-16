@@ -6,6 +6,7 @@
     "overlord": "${USER}",
     "broker": "${USER}",
     "access": "rw",
+    "meta": ["version-foo"],
     "properties": {
 
     }

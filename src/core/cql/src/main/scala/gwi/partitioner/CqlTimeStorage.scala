@@ -12,7 +12,7 @@ import scala.collection.JavaConverters._
 import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.{Future, Promise}
 
-case class CqlSource(contactPoints: Seq[String], access: String, properties: Map[String, String]) extends StorageSource
+case class CqlSource(contactPoints: Seq[String], access: String, meta: Set[String], properties: Map[String, String]) extends StorageSource
 
 case class CqlTimeStorage(id: String, source: CqlSource, partitioner: PlainTimePartitioner) extends TimeStorage[CqlSource, PlainTimePartitioner, TimeClient]
 
@@ -33,7 +33,7 @@ object CqlTimeStorage {
 
   implicit class DruidTimeStoragePimp(underlying: CqlTimeStorage) {
     def client(implicit session: Session) = new TimeClient {
-      private val CqlTimeStorage(_, _, partitioner) = underlying
+      private val CqlTimeStorage(_, source, partitioner) = underlying
 
       private val pUpdateStatement = session.prepare(s"UPDATE partition SET tables = tables + ? WHERE interval=?;")
       private val pSelectStatement = session.prepare(s"SELECT * FROM partition;")
@@ -41,29 +41,29 @@ object CqlTimeStorage {
 
       def delete(partition: TimePartition): Future[Done] = Future.successful(Done) //TODO
 
-      def markWithSuccess(partition: TimePartition, meta: List[String]): Future[Done] =
-        session.executeAsync(pUpdateStatement.bind(meta.asJava, partition)).asScala().map(_ => Done)(Implicits.global)
+      def markWithSuccess(partition: TimePartition): Future[Done] =
+        session.executeAsync(pUpdateStatement.bind(source.meta.toList.asJava, partition)).asScala().map(_ => Done)(Implicits.global)
 
-      def listAll(meta: Set[String]): Future[Seq[TimePartition]] = {
-        val javaTables = meta.asJava
+      def listAll: Future[Seq[TimePartition]] = {
+        val javaTables = source.meta.asJava
         CassandraSource(pSelectStatement.bind())
           .collect { case row if row.getSet("tables", classOf[String]).containsAll(javaTables) =>
             underlying.partitioner.build(new Interval(row.getString("interval"), ISOChronology.getInstanceUTC))
           }.runWith(Sink.seq[TimePartition])
       }
 
-      def list(range: Interval, meta: Set[String]): Future[Seq[TimePartition]] = {
+      def list(range: Interval): Future[Seq[TimePartition]] = {
         val intervals = partitioner.granularity.getIterable(range).toList
-        val javaTables = meta.asJava
+        val javaTables = source.meta.asJava
         CassandraSource(pSelectStatementIn.bind(intervals.asJava))
           .collect { case row if row.getSet("tables", classOf[String]).containsAll(javaTables) =>
             underlying.partitioner.build(new Interval(row.getString("interval"), ISOChronology.getInstanceUTC))
           }.runWith(Sink.seq[TimePartition])
       }
 
-      def listMissing(range: Interval, tables: Set[String] = Set.empty): Future[Seq[TimePartition]] = {
+      def listMissing(range: Interval): Future[Seq[TimePartition]] = {
         val intervals = partitioner.granularity.getIterable(range).toList
-        list(range, tables)
+        list(range)
         .map { existingPartitions =>
           val existingIntervalSet = existingPartitions.map(_.value).toSet
           intervals.collect { case i if !existingIntervalSet.contains(i) =>
