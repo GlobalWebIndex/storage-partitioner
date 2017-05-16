@@ -1,5 +1,7 @@
 package gwi.partitioner
 
+import akka.Done
+
 import scala.concurrent.Future
 
 trait StoragePartition[P] {
@@ -7,9 +9,9 @@ trait StoragePartition[P] {
 }
 
 trait StorageClient[IN,SP <: StoragePartition[IN]] {
-  def delete(partition: SP): Unit
-  def markWithSuccess(partition: SP, content: String): Unit
-  def list: Future[Seq[SP]]
+  def delete(partition: SP): Future[Done]
+  def markWithSuccess(partition: SP, meta: List[String]): Future[Done]
+  def listAll(content: Set[String]): Future[Seq[SP]]
 }
 
 trait StorageSource {

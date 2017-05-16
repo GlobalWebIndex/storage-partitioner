@@ -20,7 +20,7 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
     val client = storage.client
     partitions.foreach { partition =>
       client.indexData(partition, "test.json", s"""{"timestamp":"${partition.value.getStart.toString}", "foo":"bar"}""")
-      client.markWithSuccess(partition, "version-foo")
+      client.markWithSuccess(partition, List("version-foo"))
     }
   }
 
@@ -41,16 +41,16 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
       assertResult(S3TimePartition(bucket, path, "y=2011/m=02/d=03/H=04/", new Interval("2011-02-03T04:00:00.000/2011-02-03T05:00:00.000")))(qualifiedStorage.lift(qualifiedStorage.partitioner.pathToInterval("bla/y=2011/m=02/d=03/H=04/")))
     }
     "list partitions" in {
-      whenReady(plainStorage.client.list) { actualPartitions =>
+      whenReady(plainStorage.client.listAll(Set.empty)) { actualPartitions =>
         assertResult(partitions)(actualPartitions.sortBy(_.value.toString))
         actualPartitions.map(plainStorage.lift).map(_.partitionFileKey(S3TimeStorage.SuccessFileName)).foreach { successFileKey =>
-          assertResult("version-foo")(s3Driver.readObjectStreamAsString(bucket, successFileKey, 128))
+          assertResult("version-foo\n")(s3Driver.readObjectStreamAsString(bucket, successFileKey, 128))
         }
       }
     }
     "delete partitions" in {
       plainStorage.client.delete(partitions.head)
-      whenReady(plainStorage.client.list) { actualPartitions =>
+      whenReady(plainStorage.client.listAll(Set.empty)) { actualPartitions =>
         assertResult(partitions.tail)(actualPartitions.sortBy(_.value.toString))
       }
     }

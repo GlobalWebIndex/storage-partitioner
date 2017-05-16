@@ -4,10 +4,12 @@ import java.io.ByteArrayInputStream
 import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
+import akka.Done
 import com.amazonaws.services.s3.model.ObjectMetadata
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 
+import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.{ExecutionContext, Future}
 import scala.language.implicitConversions
 import scala.util.Try
@@ -33,12 +35,13 @@ object S3TimeStorage {
 
       private def checkPermissions() = require(source.access.contains("w"), s"s3://${source.bucket}/${source.path} has not write permissions !!!")
 
-      def delete(partition: TimePartition): Unit = {
+      def delete(partition: TimePartition): Future[Done] = Future {
         checkPermissions()
         driver
           .listKeys(source.bucket, underlying.lift(partition.value).partitionKey)
           .foreach(driver.deleteObject(source.bucket, _))
-      }
+        Done.getInstance()
+      }(Implicits.global)
 
       def indexData(partition: TimePartition, fileName: String, content: String): Unit = {
         checkPermissions()
@@ -48,14 +51,14 @@ object S3TimeStorage {
         driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(fileName), inputStream, metaData)
       }
 
-      def markWithSuccess(partition: TimePartition, content: String): Unit = {
-        driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(SuccessFileName), content)
-      }
+      def markWithSuccess(partition: TimePartition, meta: List[String]): Future[Done] =
+        Future(driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(SuccessFileName), meta.mkString("","\n","\n")))(Implicits.global)
+          .map(_ => Done)(Implicits.global)
 
-      def list: Future[Seq[TimePartition]] =
-        list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))
+      def listAll(meta: Set[String]): Future[Seq[TimePartition]] =
+        list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))), meta)
 
-      def list(range: Interval): Future[Vector[TimePartition]] = {
+      def list(range: Interval, meta: Set[String]): Future[Vector[TimePartition]] = {
         def timePath(time: DateTime) = partitioner.dateToPath(time).split("/").filter(_.nonEmpty)
         val commonAncestorList =
           timePath(range.getStart).zip(timePath(range.getEnd))

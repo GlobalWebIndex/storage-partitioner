@@ -1,5 +1,6 @@
 package gwi.partitioner
 
+import akka.Done
 import gwi.druid.client.DruidClient
 import org.joda.time.chrono.ISOChronology
 import org.joda.time.{DateTime, DateTimeZone, Interval}
@@ -17,14 +18,14 @@ object DruidTimeStorage {
     def client(implicit driver: DruidClient) = new TimeClient {
       private val DruidTimeStorage(_, source, partitioner) = underlying
 
-      def delete(partition: TimePartition): Unit = {} //deleting segments is not real-time, ie. delete & create of the same partition would not have deterministic outcome
+      def delete(partition: TimePartition): Future[Done] = Future.successful(Done.getInstance()) //deleting segments is not real-time, ie. delete & create of the same partition would not have deterministic outcome
 
-      def markWithSuccess(partition: TimePartition, content: String): Unit = {} // done by druid
+      def markWithSuccess(partition: TimePartition, meta: List[String]): Future[Done] = Future.successful(Done.getInstance()) // done by druid
 
-      def list: Future[Seq[TimePartition]] =
-        list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))
+      def listAll(meta: Set[String]): Future[Seq[TimePartition]] =
+        list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))), meta)
 
-      def list(range: Interval): Future[Seq[TimePartition]] = {
+      def list(range: Interval, meta: Set[String]): Future[Seq[TimePartition]] = {
         Future {
           driver.forQueryingCoordinator(source.coordinator)(10.seconds, 1.minute)
             .listDataSourceIntervals(source.dataSource).get

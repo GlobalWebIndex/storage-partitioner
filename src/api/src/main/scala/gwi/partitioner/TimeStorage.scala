@@ -7,7 +7,7 @@ import scala.concurrent.Future
 class TimePartition(val value: Interval) extends StoragePartition[Interval]
 
 trait TimeClient extends StorageClient[Interval,TimePartition] {
-  def list(range: Interval): Future[Seq[TimePartition]]
+  def list(range: Interval, meta: Set[String]): Future[Seq[TimePartition]]
 }
 
 trait TimePartitioner extends Partitioner[Interval] {
