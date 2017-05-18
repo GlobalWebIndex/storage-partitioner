@@ -37,11 +37,13 @@ object CqlTimeStorage {
     def client(implicit session: Session, mat: ActorMaterializer) = new TimeClient {
       private val CqlTimeStorage(_, CqlSource(_, _, tables, meta, _), partitioner) = underlying
 
-      private val pUpdateStatement = session.prepare(s"UPDATE partition SET tables = tables + ? WHERE interval=?;")
-      private val pSelectStatement = session.prepare(s"SELECT * FROM partition;")
-      private val pSelectStatementIn = session.prepare(s"SELECT * FROM partition WHERE interval IN ?;")
+      private val pUpdateStatement    = session.prepare("UPDATE partition SET tables = tables + ? WHERE interval=?;")
+      private val pSelectStatement    = session.prepare("SELECT * FROM partition;")
+      private val pSelectStatementIn  = session.prepare("SELECT * FROM partition WHERE interval IN ?;")
+      private val pDeleteStatementIn  = session.prepare(s"DELETE ${tables.mkString(", ")} FROM partition WHERE interval=?;")
 
-      def delete(partition: TimePartition): Future[Done] = Future.successful(Done) //TODO
+      def delete(partition: TimePartition): Future[Done] =
+        session.executeAsync(pDeleteStatementIn.bind(partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
 
       def markWithSuccess(partition: TimePartition): Future[Done] =
         session.executeAsync(pUpdateStatement.bind(meta.asJava, partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
