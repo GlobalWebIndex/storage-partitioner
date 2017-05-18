@@ -11,7 +11,7 @@ trait StorageCodec extends DefaultJsonProtocol {
 
   private[this] implicit val s3Source                 = jsonFormat5(S3Source.apply)
   private[this] implicit val druidSource              = jsonFormat7(DruidSource.apply)
-  private[this] implicit val cqlSource                = jsonFormat5(CqlSource.apply)
+  private[this] implicit val cqlSource                = jsonFormat4(CqlSource.apply)
   private[this] implicit val timePathPartitioner      = jsonFormat(S3TimePartitioner.apply, "granularity", "pathFormat", "pathPattern")
   private[this] implicit val plainTimePartitioner     = jsonFormat1(PlainTimePartitioner)
 

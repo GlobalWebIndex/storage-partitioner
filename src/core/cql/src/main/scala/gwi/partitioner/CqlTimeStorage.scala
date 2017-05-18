@@ -14,7 +14,7 @@ import scala.collection.breakOut
 import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.{Future, Promise}
 
-case class CqlSource(contactPoints: Seq[String], access: String, tables: Set[String], meta: Set[String], properties: Map[String, String]) extends StorageSource
+case class CqlSource(access: String, tables: Set[String], meta: Set[String], properties: Map[String, String]) extends StorageSource
 
 case class CqlTimeStorage(id: String, source: CqlSource, partitioner: PlainTimePartitioner) extends TimeStorage[CqlSource, PlainTimePartitioner, TimeClient]
 
@@ -35,7 +35,7 @@ object CqlTimeStorage {
 
   implicit class CqlTimeStoragePimp(underlying: CqlTimeStorage) {
     def client(implicit session: Session, mat: ActorMaterializer) = new TimeClient {
-      private val CqlTimeStorage(_, CqlSource(_, _, tables, meta, _), partitioner) = underlying
+      private val CqlTimeStorage(_, CqlSource(_, tables, meta, _), partitioner) = underlying
 
       private val pUpdateStatement    = session.prepare("UPDATE partition SET tables = tables + ? WHERE interval=?;")
       private val pSelectStatement    = session.prepare("SELECT * FROM partition;")
