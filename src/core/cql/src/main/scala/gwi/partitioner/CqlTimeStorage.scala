@@ -10,6 +10,7 @@ import org.joda.time.Interval
 import org.joda.time.chrono.ISOChronology
 
 import scala.collection.JavaConverters._
+import scala.collection.breakOut
 import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.{Future, Promise}
 
@@ -43,7 +44,7 @@ object CqlTimeStorage {
       def delete(partition: TimePartition): Future[Done] = Future.successful(Done) //TODO
 
       def markWithSuccess(partition: TimePartition): Future[Done] =
-        session.executeAsync(pUpdateStatement.bind(meta.asJava, partition)).asScala().map(_ => Done)(Implicits.global)
+        session.executeAsync(pUpdateStatement.bind(meta.asJava, partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
 
       def listAll: Future[Seq[TimePartition]] = {
         val javaTables = tables.asJava
@@ -54,7 +55,7 @@ object CqlTimeStorage {
       }
 
       def list(range: Interval): Future[Seq[TimePartition]] = {
-        val intervals = partitioner.granularity.getIterable(range).toList
+        val intervals: List[String] = partitioner.granularity.getIterable(range).map(_.toString)(breakOut)
         val javaTables = tables.asJava
         CassandraSource(pSelectStatementIn.bind(intervals.asJava))
           .collect { case row if row.getSet("tables", classOf[String]).containsAll(javaTables) =>
