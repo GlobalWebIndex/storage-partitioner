@@ -5,12 +5,13 @@ import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
 
 import akka.Done
+import akka.stream.scaladsl.{Sink, Source}
 import com.amazonaws.services.s3.model.ObjectMetadata
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 
 import scala.concurrent.ExecutionContext.Implicits
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 import scala.language.implicitConversions
 import scala.util.Try
 
@@ -58,7 +59,7 @@ object S3TimeStorage {
       def listAll: Future[Seq[TimePartition]] =
         list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))
 
-      def list(range: Interval): Future[Vector[TimePartition]] = {
+      def list(range: Interval): Future[Seq[S3TimePartition]] = {
         def timePath(time: DateTime) = partitioner.dateToPath(time).split("/").filter(_.nonEmpty)
         val commonAncestorList =
           timePath(range.getStart).zip(timePath(range.getEnd))
@@ -69,15 +70,15 @@ object S3TimeStorage {
         val pathDepth = partitioner.granularity.arity - commonAncestorList.length
         def isValidPartition(timePath: S3TimePartition) = driver.doesObjectExist(source.bucket, timePath.partitionFileKey(SuccessFileName))
 
-        driver.getRelativeDirPaths(source.bucket, storagePrefix, pathDepth, "/")
-          .map { s3DirPaths =>
-            s3DirPaths
-              .map(commonAncestorList ++ _)
-              .map(arr => underlying.lift(underlying.partitioner.pathToInterval(arr.mkString("", "/", "/"))))
-              .collect { case path if range.contains(path.value) && isValidPartition(path) => path }
-              .sortWith { case (x, y) => x.interval.getStart.compareTo(y.interval.getStart) > 1 }
-              .toVector
-          }(ExecutionContext.Implicits.global)
+        Source.fromFuture(driver.getRelativeDirPaths(source.bucket, storagePrefix, pathDepth, "/"))
+          .mapConcat(_.toVector)
+          .map(commonAncestorList ++ _)
+          .map(arr => underlying.lift(underlying.partitioner.pathToInterval(arr.mkString("", "/", "/"))))
+          .filter( path => range.contains(path.value) )
+          .mapAsync(64)( path => Future(path -> isValidPartition(path))(S3Driver.cachedScheduler) )
+          .collect { case (path,isValid) if isValid => path }
+          .runWith(Sink.seq)(driver.mat)
+          .map(_.sortWith { case (x, y) => x.interval.getStart.compareTo(y.interval.getStart) > 1 })(Implicits.global)
       }
     }
   }

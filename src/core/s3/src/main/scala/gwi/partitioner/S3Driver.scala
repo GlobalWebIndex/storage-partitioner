@@ -31,7 +31,7 @@ import scala.util.control.NonFatal
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-class S3Driver(credentials: AWSCredentials, region: Region, config: ClientConfiguration)(implicit system: ActorSystem, mat: Materializer) extends AmazonS3Client(credentials, config) {
+class S3Driver(credentials: AWSCredentials, region: Region, config: ClientConfiguration)(implicit system: ActorSystem, val mat: Materializer) extends AmazonS3Client(credentials, config) {
   lazy val alpakka = new S3Client(auth.AWSCredentials(credentials.getAWSAccessKeyId, credentials.getAWSSecretKey), region.getName)
   setRegion(region)
 }

@@ -47,5 +47,6 @@ lazy val `storage-partitioner-all` = (project in file("src/all"))
   .dependsOn(
     `storage-partitioner-api` % "compile->compile;test->test",
     `storage-partitioner-s3` % "compile->compile;test->test",
-    `storage-partitioner-druid` % "compile->compile;test->test"
+    `storage-partitioner-druid` % "compile->compile;test->test",
+    `storage-partitioner-cql` % "compile->compile;test->test"
   )
