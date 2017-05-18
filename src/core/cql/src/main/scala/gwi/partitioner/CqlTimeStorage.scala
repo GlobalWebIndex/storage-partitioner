@@ -43,7 +43,7 @@ object CqlTimeStorage {
       def delete(partition: TimePartition): Future[Done] = Future.successful(Done) //TODO
 
       def markWithSuccess(partition: TimePartition): Future[Done] =
-        session.executeAsync(pUpdateStatement.bind(meta.toList.asJava, partition)).asScala().map(_ => Done)(Implicits.global)
+        session.executeAsync(pUpdateStatement.bind(meta.asJava, partition)).asScala().map(_ => Done)(Implicits.global)
 
       def listAll: Future[Seq[TimePartition]] = {
         val javaTables = tables.asJava
