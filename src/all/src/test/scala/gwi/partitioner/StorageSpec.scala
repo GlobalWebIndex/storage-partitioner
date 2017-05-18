@@ -1,5 +1,6 @@
 package gwi.partitioner
 
+import com.datastax.driver.core.Session
 import gwi.druid.client.DruidClient
 import org.scalatest._
 
@@ -11,6 +12,7 @@ class StorageSpec extends FreeSpec with StorageCodec with AkkaSupport with Match
 
   implicit val s3 = S3Driver("x","y","eu-west-1")
   implicit val druid = DruidClient
+  implicit val session: Session = null
 
   "storages should" - {
 
@@ -26,7 +28,7 @@ class StorageSpec extends FreeSpec with StorageCodec with AkkaSupport with Match
       s3S.toJson
       druidS.toJson
       val stores = List[TimeStorage.*](s3S, druidS)
-      stores.map(storage => storage.client)
+      stores.map(storage => storage.getClient)
     }
 
     "have client available" in {
