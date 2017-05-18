@@ -1,5 +1,7 @@
 package gwi.partitioner
 
+import com.typesafe.scalalogging.LazyLogging
+
 case class Expression(exp: String, variable: String, value: Option[String])
 object Expression {
   def apply(expression: String): Expression = {
@@ -12,16 +14,19 @@ object Expression {
   }
 }
 
-object Config extends StorageCodec {
+object Config extends StorageCodec with LazyLogging {
   import spray.json._
 
   private def storagePath(name: String) = s"storages/$name.json"
   private def storageLines(path: String) = IO.streamToSeq(getClass.getClassLoader.getResourceAsStream(path), 8192)
   private def extrapolate(content: String): String = {
     val expressions = "\\$\\{.+?\\}".r.findAllIn(content).map(Expression(_)).toList
-    require(expressions.forall(_.value.isDefined), s"Please export variable ${expressions.find(_.value.isEmpty).get.variable}")
-    expressions.foldLeft(content) { case (acc, Expression(exp,variable,Some(value))) =>
-      acc.replace(exp, value)
+    expressions.foldLeft(content) {
+      case (acc, Expression(exp,_,Some(value))) =>
+        acc.replace(exp, value)
+      case (acc, Expression(exp,_,None)) =>
+        logger.warn(s"Please export variable $exp !!!")
+        acc
     }
   }
 
