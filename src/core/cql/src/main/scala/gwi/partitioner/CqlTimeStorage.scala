@@ -35,7 +35,9 @@ object CqlTimeStorage {
 
   implicit class CqlTimeStoragePimp(underlying: CqlTimeStorage) {
     def client(implicit session: Session, mat: ActorMaterializer) = new TimeClient {
-      private val CqlTimeStorage(_, CqlSource(_, tables, _, _), partitioner) = underlying
+      private val CqlTimeStorage(_, source, partitioner) = underlying
+
+      private val javaTables = source.tables.asJava
 
       private val pAddStatement       = session.prepare("UPDATE partition SET tables = tables + ? WHERE interval=?;")
       private val pSelectStatement    = session.prepare("SELECT * FROM partition;")
@@ -43,13 +45,12 @@ object CqlTimeStorage {
       private val pRemoveStatementIn  = session.prepare("UPDATE partition SET tables = tables - ? WHERE interval=?;")
 
       def delete(partition: TimePartition): Future[Done] =
-        session.executeAsync(pRemoveStatementIn.bind(tables, partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
+        session.executeAsync(pRemoveStatementIn.bind(javaTables, partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
 
       def markWithSuccess(partition: TimePartition): Future[Done] =
-        session.executeAsync(pAddStatement.bind(tables, partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
+        session.executeAsync(pAddStatement.bind(javaTables, partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
 
       def listAll: Future[Seq[TimePartition]] = {
-        val javaTables = tables.asJava
         CassandraSource(pSelectStatement.bind())
           .collect { case row if row.getSet("tables", classOf[String]).containsAll(javaTables) =>
             underlying.partitioner.build(new Interval(row.getString("interval"), ISOChronology.getInstanceUTC))
@@ -58,7 +59,6 @@ object CqlTimeStorage {
 
       def list(range: Interval): Future[Seq[TimePartition]] = {
         val intervals: List[String] = partitioner.granularity.getIterable(range).map(_.toString)(breakOut)
-        val javaTables = tables.asJava
         CassandraSource(pSelectStatementIn.bind(intervals.asJava))
           .collect { case row if row.getSet("tables", classOf[String]).containsAll(javaTables) =>
             underlying.partitioner.build(new Interval(row.getString("interval"), ISOChronology.getInstanceUTC))
