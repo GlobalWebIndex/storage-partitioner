@@ -35,18 +35,18 @@ object CqlTimeStorage {
 
   implicit class CqlTimeStoragePimp(underlying: CqlTimeStorage) {
     def client(implicit session: Session, mat: ActorMaterializer) = new TimeClient {
-      private val CqlTimeStorage(_, CqlSource(_, tables, meta, _), partitioner) = underlying
+      private val CqlTimeStorage(_, CqlSource(_, tables, _, _), partitioner) = underlying
 
-      private val pUpdateStatement    = session.prepare("UPDATE partition SET tables = tables + ? WHERE interval=?;")
+      private val pAddStatement       = session.prepare("UPDATE partition SET tables = tables + ? WHERE interval=?;")
       private val pSelectStatement    = session.prepare("SELECT * FROM partition;")
       private val pSelectStatementIn  = session.prepare("SELECT * FROM partition WHERE interval IN ?;")
-      private val pDeleteStatementIn  = session.prepare(s"DELETE ${tables.mkString(", ")} FROM partition WHERE interval=?;")
+      private val pRemoveStatementIn  = session.prepare("UPDATE partition SET tables = tables - ? WHERE interval=?;")
 
       def delete(partition: TimePartition): Future[Done] =
-        session.executeAsync(pDeleteStatementIn.bind(partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
+        session.executeAsync(pRemoveStatementIn.bind(tables, partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
 
       def markWithSuccess(partition: TimePartition): Future[Done] =
-        session.executeAsync(pUpdateStatement.bind(meta.asJava, partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
+        session.executeAsync(pAddStatement.bind(tables, partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
 
       def listAll: Future[Seq[TimePartition]] = {
         val javaTables = tables.asJava
