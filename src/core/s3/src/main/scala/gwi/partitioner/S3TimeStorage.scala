@@ -34,18 +34,19 @@ object S3TimeStorage {
     def client(implicit driver: S3Driver) = new S3TimeClient {
       private val S3TimeStorage(_, source, partitioner) = underlying
 
-      private def checkPermissions() = require(source.access.contains("w"), s"s3://${source.bucket}/${source.path} has not write permissions !!!")
+      private val permissionError = s"s3://${source.bucket}/${source.path} has not write permissions !!!"
+      private def hasPermissions = source.access.contains("w")
 
-      def delete(partition: TimePartition): Future[Done] = Future {
-        checkPermissions()
-        driver
-          .listKeys(source.bucket, underlying.lift(partition.value).partitionKey)
-          .foreach(driver.deleteObject(source.bucket, _))
-        Done.getInstance()
-      }(Implicits.global)
+      def delete(partition: TimePartition): Future[Done] =
+        if (!hasPermissions)
+          Future.failed(new IllegalArgumentException(permissionError))
+        else
+        Source.fromIterator( () => driver.listKeys(source.bucket, underlying.lift(partition.value).partitionKey).iterator )
+          .mapAsync(16) ( key => Future(driver.deleteObject(source.bucket, key))(S3Driver.cachedScheduler) )
+          .runWith(Sink.ignore)(driver.mat)
 
       def indexData(partition: TimePartition, fileName: String, content: String): Unit = {
-        checkPermissions()
+        require(hasPermissions, permissionError)
         val inputStream = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8))
         val metaData = new ObjectMetadata()
         metaData.setContentLength(content.length)
