@@ -18,7 +18,10 @@ object Config extends StorageCodec with LazyLogging {
   import spray.json._
 
   private def storagePath(name: String) = s"storages/$name.json"
-  private def storageLines(path: String) = IO.streamToSeq(getClass.getClassLoader.getResourceAsStream(path), 8192)
+  private def storageLines(path: String) = {
+    require(getClass.getClassLoader.getResourceAsStream(path) != null, s"Resource $path doesn't exist on classpath !!!")
+    IO.streamToSeq(getClass.getClassLoader.getResourceAsStream(path), 8192)
+  }
   private def extrapolate(content: String): String = {
     val expressions = "\\$\\{.+?\\}".r.findAllIn(content).map(Expression(_)).toList
     expressions.foldLeft(content) {
