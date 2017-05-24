@@ -18,12 +18,14 @@ trait StorageCodec extends DefaultJsonProtocol {
   private[this] implicit object StorageSourceFormat extends RootJsonFormat[StorageSource] {
     def write(a: StorageSource): JsValue = a match {
       case p: S3Source => p.toJson
+      case p: CqlSource => p.toJson
       case p: DruidSource => p.toJson
     }
     def read(value: JsValue): StorageSource =
       value.asJsObject.fields match {
         case f if f.contains("bucket") => value.convertTo[S3Source]
         case f if f.contains("dataSource") => value.convertTo[DruidSource]
+        case f if f.contains("tables") => value.convertTo[CqlSource]
       }
   }
 
@@ -45,11 +47,13 @@ trait StorageCodec extends DefaultJsonProtocol {
   implicit object timeStorage extends RootJsonFormat[TimeStorage.*] {
     def write(a: TimeStorage.*): JsValue = a match {
       case p: S3TimeStorage => p.toJson
+      case p: CqlTimeStorage => p.toJson
       case p: DruidTimeStorage => p.toJson
     }
     def read(value: JsValue) =
       value.asJsObject.fields("source").convertTo[StorageSource] match {
         case _: S3Source => value.convertTo[S3TimeStorage]
+        case _: CqlSource => value.convertTo[CqlTimeStorage]
         case _: DruidSource => value.convertTo[DruidTimeStorage]
       }
   }
