@@ -39,16 +39,20 @@ object CqlTimeStorage {
 
       private val javaTables = source.tables.asJava
 
-      private val pAddStatement       = session.prepare("UPDATE partition SET tables = tables + ? WHERE interval=?;")
+      private val pAddStatement       = session.prepare("UPDATE partition SET tables = tables + ? WHERE interval=? AND start=? AND end=?;")
       private val pSelectStatement    = session.prepare("SELECT * FROM partition;")
       private val pSelectStatementIn  = session.prepare("SELECT * FROM partition WHERE interval IN ?;")
       private val pRemoveStatementIn  = session.prepare("UPDATE partition SET tables = tables - ? WHERE interval=?;")
 
       def delete(partition: TimePartition): Future[Done] =
-        session.executeAsync(pRemoveStatementIn.bind(javaTables, partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
+        session.executeAsync(
+          pRemoveStatementIn.bind(javaTables, partition.value.toString)
+        ).asScala().map(_ => Done)(Implicits.global)
 
       def markWithSuccess(partition: TimePartition): Future[Done] =
-        session.executeAsync(pAddStatement.bind(javaTables, partition.value.toString)).asScala().map(_ => Done)(Implicits.global)
+        session.executeAsync(
+          pAddStatement.bind(javaTables, partition.value.toString, partition.value.getStart.toString, partition.value.getEnd.toString)
+        ).asScala().map(_ => Done)(Implicits.global)
 
       def listAll: Future[Seq[TimePartition]] = {
         CassandraSource(pSelectStatement.bind())
