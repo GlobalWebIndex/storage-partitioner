@@ -51,7 +51,7 @@ object CqlTimeStorage {
 
       def markWithSuccess(partition: TimePartition): Future[Done] =
         session.executeAsync(
-          pAddStatement.bind(javaTables, partition.value.toString, partition.value.getStart.toString, partition.value.getEnd.toString)
+          pAddStatement.bind(javaTables, partition.value.toString, partition.value.getStart.toDate, partition.value.getEnd.toDate)
         ).asScala().map(_ => Done)(Implicits.global)
 
       def listAll: Future[Seq[TimePartition]] = {
