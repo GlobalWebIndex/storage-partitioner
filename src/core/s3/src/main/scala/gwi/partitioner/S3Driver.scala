@@ -11,9 +11,8 @@ import akka.actor.{ActorLogging, ActorSystem, Props}
 import akka.stream.Materializer
 import akka.stream.actor.ActorPublisher
 import akka.stream.actor.ActorPublisherMessage.{Cancel, Request}
-import akka.stream.alpakka.s3.auth
-import akka.stream.alpakka.s3.impl.S3Stream
 import akka.stream.alpakka.s3.scaladsl.S3Client
+import akka.stream.alpakka.s3.{BufferType, Proxy, S3Settings, auth}
 import akka.stream.scaladsl.{Sink, Source}
 import com.amazonaws.auth.{AWSCredentials, BasicAWSCredentials}
 import com.amazonaws.regions.{Region, Regions}
@@ -33,8 +32,8 @@ import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
 class S3Driver(credentials: AWSCredentials, region: Region, config: ClientConfiguration)(implicit system: ActorSystem, val mat: Materializer) extends AmazonS3Client(credentials, config) {
-  lazy val alpakkaClient = new S3Client(auth.AWSCredentials(credentials.getAWSAccessKeyId, credentials.getAWSSecretKey), region.getName)
-  lazy val alpakkaStream = S3Stream(auth.AWSCredentials(credentials.getAWSAccessKeyId, credentials.getAWSSecretKey), region.getName)
+  def alpakka(bufferType: BufferType, diskBufferPath: String = "", proxy: Option[Proxy] = None, pathStyleAccess: Boolean = false) =
+    new S3Client(S3Settings(bufferType, diskBufferPath, proxy, auth.AWSCredentials(credentials.getAWSAccessKeyId, credentials.getAWSSecretKey), region.getName, pathStyleAccess))
   setRegion(region)
 }
 
