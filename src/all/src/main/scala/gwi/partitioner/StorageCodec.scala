@@ -25,7 +25,7 @@ trait StorageCodec extends DefaultJsonProtocol {
       value.asJsObject.fields match {
         case f if f.contains("bucket") => value.convertTo[S3Source]
         case f if f.contains("dataSource") => value.convertTo[DruidSource]
-        case f if f.contains("tables") => value.convertTo[CqlSource]
+        case f if f.contains("tag") => value.convertTo[CqlSource]
       }
   }
 

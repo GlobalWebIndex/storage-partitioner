@@ -1,8 +1,8 @@
 
 CREATE TABLE partition (
     interval text,
+    tag text,
     start timestamp,
     end timestamp,
-    tables set<text>,
-    PRIMARY KEY (interval,start,end)
+    PRIMARY KEY (interval,tag,start,end)
 );

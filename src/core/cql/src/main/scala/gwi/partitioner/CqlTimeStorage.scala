@@ -14,7 +14,7 @@ import scala.collection.breakOut
 import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.{Future, Promise}
 
-case class CqlSource(access: String, tables: Set[String], meta: Set[String], properties: Map[String, String]) extends StorageSource
+case class CqlSource(access: String, tag: String, meta: Set[String], properties: Map[String, String]) extends StorageSource
 
 case class CqlTimeStorage(id: String, source: CqlSource, partitioner: PlainTimePartitioner) extends TimeStorage[CqlSource, PlainTimePartitioner, TimeClient]
 
@@ -37,36 +37,34 @@ object CqlTimeStorage {
     def client(implicit session: Session, mat: ActorMaterializer) = new TimeClient {
       private val CqlTimeStorage(_, source, partitioner) = underlying
 
-      private val javaTables = source.tables.asJava
+      private val tag = source.tag
 
-      private val pAddStatement       = session.prepare("UPDATE partition SET tables = tables + ? WHERE interval=? AND start=? AND end=?;")
-      private val pSelectStatement    = session.prepare("SELECT * FROM partition;")
-      private val pSelectStatementIn  = session.prepare("SELECT * FROM partition WHERE interval IN ?;")
-      private val pRemoveStatementIn  = session.prepare("UPDATE partition SET tables = tables - ? WHERE interval=?;")
+      private val pAddStatement       = session.prepare("INSERT INTO partition (interval,tag,start,end) VALUES (?,?,?,?)")
+      private val pSelectStatement    = session.prepare("SELECT interval FROM partition WHERE tag = ? ALLOW FILTERING")
+      private val pSelectStatementIn  = session.prepare("SELECT interval FROM partition WHERE interval IN ? AND tag = ?")
+      private val pRemoveStatementIn  = session.prepare("DELETE FROM partition WHERE interval = ? AND tag = ?")
 
       def delete(partition: TimePartition): Future[Done] =
         session.executeAsync(
-          pRemoveStatementIn.bind(javaTables, partition.value.toString)
+          pRemoveStatementIn.bind(partition.value.toString, tag)
         ).asScala().map(_ => Done)(Implicits.global)
 
       def markWithSuccess(partition: TimePartition): Future[Done] =
         session.executeAsync(
-          pAddStatement.bind(javaTables, partition.value.toString, partition.value.getStart.toDate, partition.value.getEnd.toDate)
+          pAddStatement.bind(partition.value.toString, tag, partition.value.getStart.toDate, partition.value.getEnd.toDate)
         ).asScala().map(_ => Done)(Implicits.global)
 
       def listAll: Future[Seq[TimePartition]] = {
-        CassandraSource(pSelectStatement.bind())
-          .collect { case row if row.getSet("tables", classOf[String]).containsAll(javaTables) =>
-            underlying.partitioner.build(new Interval(row.getString("interval"), ISOChronology.getInstanceUTC))
-          }.runWith(Sink.seq[TimePartition])
+        CassandraSource(pSelectStatement.bind(tag))
+          .map ( row  => underlying.partitioner.build(new Interval(row.getString("interval"), ISOChronology.getInstanceUTC)) )
+          .runWith(Sink.seq[TimePartition])
       }
 
       def list(range: Interval): Future[Seq[TimePartition]] = {
         val intervals: List[String] = partitioner.granularity.getIterable(range).map(_.toString)(breakOut)
-        CassandraSource(pSelectStatementIn.bind(intervals.asJava))
-          .collect { case row if row.getSet("tables", classOf[String]).containsAll(javaTables) =>
-            underlying.partitioner.build(new Interval(row.getString("interval"), ISOChronology.getInstanceUTC))
-          }.runWith(Sink.seq[TimePartition])
+        CassandraSource(pSelectStatementIn.bind(intervals.asJava, tag))
+          .map ( row => underlying.partitioner.build(new Interval(row.getString("interval"), ISOChronology.getInstanceUTC)) )
+          .runWith(Sink.seq[TimePartition])
       }
 
       def listMissing(range: Interval): Future[Seq[TimePartition]] = {
