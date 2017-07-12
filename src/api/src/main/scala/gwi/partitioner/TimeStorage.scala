@@ -4,7 +4,7 @@ import org.joda.time.{DateTime, Interval}
 
 import scala.concurrent.Future
 
-class TimePartition(val value: Interval) extends StoragePartition[Interval]
+case class TimePartition(value: Interval) extends StoragePartition[Interval]
 
 trait TimeClient extends StorageClient[Interval,TimePartition] {
   def list(range: Interval): Future[Seq[TimePartition]]

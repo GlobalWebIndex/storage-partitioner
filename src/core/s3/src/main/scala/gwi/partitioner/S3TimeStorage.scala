@@ -60,7 +60,7 @@ object S3TimeStorage {
       def listAll: Future[Seq[TimePartition]] =
         list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))
 
-      def list(range: Interval): Future[Seq[S3TimePartition]] = {
+      def list(range: Interval): Future[Seq[TimePartition]] = {
         def timePath(time: DateTime) = partitioner.dateToPath(time).split("/").filter(_.nonEmpty)
         val commonAncestorList =
           timePath(range.getStart).zip(timePath(range.getEnd))
@@ -69,17 +69,17 @@ object S3TimeStorage {
 
         val storagePrefix = s"${source.path}${commonAncestorList.mkString("/")}"
         val pathDepth = partitioner.granularity.arity - commonAncestorList.length
-        def isValidPartition(timePath: S3TimePartition) = driver.doesObjectExist(source.bucket, timePath.partitionFileKey(SuccessFileName))
+        def isValidPartition(timePath: TimePartition) = driver.doesObjectExist(source.bucket, underlying.lift(timePath).partitionFileKey(SuccessFileName))
 
         Source.fromFuture(driver.getRelativeDirPaths(source.bucket, storagePrefix, pathDepth, "/"))
           .mapConcat(_.toVector)
           .map(commonAncestorList ++ _)
-          .map(arr => underlying.lift(underlying.partitioner.pathToInterval(arr.mkString("", "/", "/"))))
+          .map(arr => underlying.partitioner.build(underlying.partitioner.pathToInterval(arr.mkString("", "/", "/"))))
           .filter( path => range.contains(path.value) )
           .mapAsync(64)( path => Future(path -> isValidPartition(path))(S3Driver.cachedScheduler) )
           .collect { case (path,isValid) if isValid => path }
           .runWith(Sink.seq)(driver.mat)
-          .map(_.sortWith { case (x, y) => x.interval.getStart.compareTo(y.interval.getStart) > 1 })(Implicits.global)
+          .map(_.sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) > 1 })(Implicits.global)
       }
     }
   }
@@ -89,7 +89,7 @@ trait S3TimeClient extends TimeClient {
   def indexData(partition: TimePartition, fileName: String, content: String): Unit
 }
 
-case class S3TimePartition(bucket: String, path: String, timePath: String, interval: Interval) extends TimePartition(interval) {
+case class S3TimePartition(bucket: String, path: String, timePath: String, value: Interval) extends StoragePartition[Interval] {
   def partitionKey: String = path + timePath
   def partitionFileKey(name: String): String = path + timePath + name
 }

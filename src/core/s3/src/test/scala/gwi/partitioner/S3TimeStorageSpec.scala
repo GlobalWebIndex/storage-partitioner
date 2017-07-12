@@ -14,7 +14,7 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
   private[this] val source = S3Source(bucket, path, "rw", Set("version-foo"), Map.empty)
   private[this] val plainStorage = S3TimeStorage("foo", source, S3TimePartitioner.plain(Granularity.HOUR))
   private[this] val qualifiedStorage = S3TimeStorage("foo", source, S3TimePartitioner.qualified(Granularity.HOUR))
-  private[this] val partitions = plainStorage.liftMany(new Interval(new DateTime(2016, 1, 1, 22, 0, 0, DateTimeZone.UTC), new DateTime(2016, 1, 2, 5, 0, 0, DateTimeZone.UTC))).toVector.sortBy(_.value.toString)
+  private[this] val partitions = plainStorage.partitioner.buildMany(new Interval(new DateTime(2016, 1, 1, 22, 0, 0, DateTimeZone.UTC), new DateTime(2016, 1, 2, 5, 0, 0, DateTimeZone.UTC))).toVector.sortBy(_.value.toString)
 
   private[this] def createStorage(storage: S3TimeStorage, partitions: Iterable[TimePartition]): Unit = {
     val client = storage.client
