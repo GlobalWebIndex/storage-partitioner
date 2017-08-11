@@ -1,6 +1,6 @@
 
-version in ThisBuild := "0.0.6"
-crossScalaVersions in ThisBuild := Seq("2.12.1", "2.11.8")
+version in ThisBuild := "0.0.7"
+crossScalaVersions in ThisBuild := Seq("2.12.3", "2.11.8")
 organization in ThisBuild := "net.globalwebindex"
 libraryDependencies in ThisBuild ++= Seq(monix, akkaActor, akkaStream, scalatest, scalameter) ++ jodaTime
 
@@ -36,7 +36,7 @@ lazy val `storage-partitioner-druid` = (project in file("src/core/druid"))
   .dependsOn(`storage-partitioner-api` % "compile->compile;test->test")
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-druid", s3Resolver))
   .dependsOn(
-    ProjectRef(uri("https://github.com/GlobalWebIndex/druid4s.git#v0.0.2"), "druid4s-client") % "compile->compile;test->test"
+    ProjectRef(uri("https://github.com/GlobalWebIndex/druid4s.git#v0.0.3"), "druid4s-client") % "compile->compile;test->test"
   )
 
 lazy val `storage-partitioner-all` = (project in file("src/all"))

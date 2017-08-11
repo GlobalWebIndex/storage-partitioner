@@ -4,7 +4,6 @@ import akka.Done
 import org.joda.time.Interval
 
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.implicitConversions
 
 case class MemorySource(access: String, meta: Set[String], partitions: Seq[TimePartition], properties: Map[String, String]) extends StorageSource
 case class MemoryTimeStorage(id: String, source: MemorySource, partitioner: PlainTimePartitioner) extends TimeStorage[MemorySource,PlainTimePartitioner,TimeClient]

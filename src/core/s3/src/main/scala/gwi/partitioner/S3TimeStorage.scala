@@ -12,7 +12,6 @@ import org.joda.time.{DateTime, DateTimeZone, Interval}
 
 import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.Future
-import scala.language.implicitConversions
 import scala.util.Try
 
 case class S3Source(bucket: String, path: String, access: String, meta: Set[String], properties: Map[String,String]) extends StorageSource {

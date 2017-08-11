@@ -7,7 +7,6 @@ import org.joda.time.{DateTime, DateTimeZone, Interval}
 
 import scala.concurrent.duration._
 import scala.concurrent.{ExecutionContext, Future}
-import scala.language.implicitConversions
 
 case class DruidSource(dataSource: String, coordinator: String, overlord: String, broker: String, access: String, meta: Set[String], properties: Map[String,String]) extends StorageSource
 
