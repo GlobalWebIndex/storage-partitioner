@@ -78,7 +78,7 @@ object S3TimeStorage {
           .mapAsync(64)( path => Future(path -> isValidPartition(path))(S3Driver.cachedScheduler) )
           .collect { case (path,isValid) if isValid => path }
           .runWith(Sink.seq)(driver.mat)
-          .map(_.sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) > 1 })(Implicits.global)
+          .map(_.sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 0 })(Implicits.global)
       }
     }
   }

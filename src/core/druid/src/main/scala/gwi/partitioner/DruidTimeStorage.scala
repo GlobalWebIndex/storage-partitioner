@@ -31,7 +31,7 @@ object DruidTimeStorage {
             .getOrElse(Seq.empty)
             .map( i => underlying.partitioner.build(new Interval(i, ISOChronology.getInstanceUTC)) )
             .filter(p => range.contains(p.value))
-            .sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 1 }
+            .sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 0 }
         }(ExecutionContext.Implicits.global)
       }
 
