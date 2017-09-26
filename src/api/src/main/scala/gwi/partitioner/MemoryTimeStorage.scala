@@ -20,7 +20,11 @@ object MemoryTimeStorage {
         state = state.updated(partition, true)
         Future.successful(Done.getInstance())
       }
-      def listAll: Future[Seq[TimePartition]] = Future(state.keys.toSeq)(ExecutionContext.Implicits.global)
+      def listAll: Future[Seq[TimePartition]] = Future {
+        state.keys.toSeq
+          .sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 0 }
+      }(ExecutionContext.Implicits.global)
+
       def list(range: Interval): Future[Seq[TimePartition]] = listAll.map(_.filter(p => range.contains(p.value)))(ExecutionContext.Implicits.global)
     }
   }
