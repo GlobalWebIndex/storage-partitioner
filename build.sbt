@@ -7,6 +7,8 @@ libraryDependencies in ThisBuild ++= Seq(monix, akkaActor, akkaStream, scalatest
 lazy val druid4sVersion = "0.0.4"
 
 lazy val `storage-partitioner` = (project in file("."))
+  .settings(aggregate in update := false)
+  .settings(publish := { })
   .aggregate(`storage-partitioner-api`, `storage-partitioner-s3`, `storage-partitioner-druid`, `storage-partitioner-all`)
 
 lazy val `storage-partitioner-api` = (project in file("src/api"))
