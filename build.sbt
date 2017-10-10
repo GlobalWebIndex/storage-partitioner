@@ -13,12 +13,10 @@ lazy val `storage-partitioner` = (project in file("."))
 
 lazy val `storage-partitioner-api` = (project in file("src/api"))
   .enablePlugins(CommonPlugin)
-  .settings(name := "storage-partitioner-api")
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-api", s3Resolver))
 
 lazy val `storage-partitioner-s3` = (project in file("src/core/s3"))
   .enablePlugins(CommonPlugin)
-  .settings(name := "storage-partitioner-s3")
   .settings(libraryDependencies ++= Seq(awsS3, alpakkaS3, s3mock))
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-s3", s3Resolver))
   .dependsOn(
@@ -27,7 +25,6 @@ lazy val `storage-partitioner-s3` = (project in file("src/core/s3"))
 
 lazy val `storage-partitioner-cql` = (project in file("src/core/cql"))
   .enablePlugins(CommonPlugin)
-  .settings(name := "storage-partitioner-cql")
   .settings(libraryDependencies ++= Seq(cassandraDriver, alpakkaCassandra))
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-cql", s3Resolver))
   .dependsOn(
@@ -36,7 +33,6 @@ lazy val `storage-partitioner-cql` = (project in file("src/core/cql"))
 
 lazy val `storage-partitioner-druid` = (project in file("src/core/druid"))
   .enablePlugins(CommonPlugin)
-  .settings(name := "storage-partitioner-druid")
   .dependsOn(`storage-partitioner-api` % "compile->compile;test->test")
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-druid", s3Resolver))
   .dependsOn(
@@ -45,7 +41,6 @@ lazy val `storage-partitioner-druid` = (project in file("src/core/druid"))
 
 lazy val `storage-partitioner-all` = (project in file("src/all"))
   .enablePlugins(CommonPlugin)
-  .settings(name := "storage-partitioner-all")
   .settings(libraryDependencies += sprayJson)
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner", s3Resolver))
   .dependsOn(
