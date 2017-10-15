@@ -1,10 +1,10 @@
 
-version in ThisBuild := "0.1.3"
+version in ThisBuild := "0.1.4"
 crossScalaVersions in ThisBuild := Seq("2.12.3", "2.11.8")
 organization in ThisBuild := "net.globalwebindex"
 libraryDependencies in ThisBuild ++= Seq(monix, akkaActor, akkaStream, scalatest, scalameter, loggingImplLog4j % "test") ++ jodaTime
 
-lazy val druid4sVersion = "0.0.7"
+lazy val druid4sVersion = "0.0.8"
 
 lazy val `storage-partitioner` = (project in file("."))
   .settings(aggregate in update := false)
