@@ -1,12 +1,13 @@
 package gwi.partitioner
 
+import gwi.druid.utils.Granularity
 import org.joda.time.{DateTime, IllegalFieldValueException}
 import org.scalatest.{FreeSpec, Matchers}
 
 import scala.util.{Failure, Success, Try}
 
 class S3TimePartitionerSpec extends FreeSpec with Matchers {
-  import Granularity._
+  import gwi.druid.utils.Granularity._
   private[this] val exception = new IllegalFieldValueException("","")
 
   "test hour to date" in {

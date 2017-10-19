@@ -1,5 +1,6 @@
 package gwi.partitioner
 
+import gwi.druid.utils.Granularity
 import org.joda.time.{DateTime, Interval}
 
 import scala.concurrent.Future

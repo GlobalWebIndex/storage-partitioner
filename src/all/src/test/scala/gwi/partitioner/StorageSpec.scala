@@ -1,7 +1,8 @@
 package gwi.partitioner
 
 import com.datastax.driver.core.Session
-import gwi.druid.client.DruidClient
+import gwi.druid.utils.Granularity
+import gwi.druid.client._
 import org.scalatest._
 
 class StorageSpec extends FreeSpec with StorageCodec with AkkaSupport with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {

@@ -1,5 +1,6 @@
 package gwi.partitioner
 
+import gwi.druid.utils.Granularity
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Millis, Seconds, Span}

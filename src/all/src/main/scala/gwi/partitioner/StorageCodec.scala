@@ -1,5 +1,6 @@
 package gwi.partitioner
 
+import gwi.druid.utils.Granularity
 import spray.json._
 
 trait StorageCodec extends DefaultJsonProtocol {

@@ -7,6 +7,7 @@ import java.util.regex.Pattern
 import akka.Done
 import akka.stream.scaladsl.{Sink, Source}
 import com.amazonaws.services.s3.model.ObjectMetadata
+import gwi.druid.utils.Granularity
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 
