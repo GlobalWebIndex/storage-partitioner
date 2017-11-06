@@ -29,7 +29,8 @@ object DruidTimeStorage {
           driver.forQueryingCoordinator(source.coordinator)(10.seconds, 1.minute)
             .listDataSourceIntervals(source.dataSource).get
             .getOrElse(Seq.empty)
-            .map( i => underlying.partitioner.build(new Interval(i, ISOChronology.getInstanceUTC)) )
+            .flatMap( i => underlying.partitioner.granularity.getIterable(new Interval(i, ISOChronology.getInstanceUTC)) )
+            .map( i => underlying.partitioner.build(i) )
             .filter(p => range.contains(p.value))
             .sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 0 }
         }(ExecutionContext.Implicits.global)
