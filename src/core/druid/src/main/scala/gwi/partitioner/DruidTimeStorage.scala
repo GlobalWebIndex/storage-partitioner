@@ -32,6 +32,7 @@ object DruidTimeStorage {
             .flatMap( i => underlying.partitioner.granularity.getIterable(new Interval(i, ISOChronology.getInstanceUTC)) )
             .map( i => underlying.partitioner.build(i) )
             .filter(p => range.contains(p.value))
+            .toSet.toVector
             .sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 0 }
         }(ExecutionContext.Implicits.global)
       }
