@@ -1,54 +1,54 @@
 
-version in ThisBuild := "0.2.6"
-crossScalaVersions in ThisBuild := Seq("2.12.3", "2.11.8")
+version in ThisBuild := "0.2.7"
+crossScalaVersions in ThisBuild := Seq("2.12.4", "2.11.8")
 organization in ThisBuild := "net.globalwebindex"
 libraryDependencies in ThisBuild ++= Seq(monix, akkaActor, akkaStream, scalatest, scalameter, loggingImplLog4j % "test") ++ jodaTime
 
-lazy val druid4sVersion = "0.1.8"
+lazy val druid4sVersion = "0.1.9"
 
-lazy val `storage-partitioner` = (project in file("."))
+lazy val `Storage-partitioner` = (project in file("."))
   .settings(aggregate in update := false)
   .settings(publish := { })
-  .aggregate(`storage-partitioner-api`, `storage-partitioner-s3`, `storage-partitioner-druid`, `storage-partitioner-all`)
+  .aggregate(`Storage-partitioner-api`, `Storage-partitioner-s3`, `Storage-partitioner-druid`, `Storage-partitioner-all`)
 
-lazy val `storage-partitioner-api` = (project in file("src/api"))
+lazy val `Storage-partitioner-api` = (project in file("src/api"))
   .enablePlugins(CommonPlugin)
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-api", s3Resolver))
   .dependsOn(
-    ProjectRef(uri(s"https://github.com/GlobalWebIndex/druid4s.git#v$druid4sVersion"), "druid4s-utils") % "compile->compile;test->test"
+    ProjectRef(uri(s"https://github.com/GlobalWebIndex/druid4s.git#v$druid4sVersion"), "Druid4s-utils") % "compile->compile;test->test"
   )
 
-lazy val `storage-partitioner-s3` = (project in file("src/core/s3"))
+lazy val `Storage-partitioner-s3` = (project in file("src/core/s3"))
   .enablePlugins(CommonPlugin)
   .settings(libraryDependencies ++= Seq(awsS3, alpakkaS3, s3mock))
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-s3", s3Resolver))
   .dependsOn(
-    `storage-partitioner-api` % "compile->compile;test->test"
+    `Storage-partitioner-api` % "compile->compile;test->test"
   )
 
-lazy val `storage-partitioner-cql` = (project in file("src/core/cql"))
+lazy val `Storage-partitioner-cql` = (project in file("src/core/cql"))
   .enablePlugins(CommonPlugin)
   .settings(libraryDependencies ++= Seq(cassandraDriver, alpakkaCassandra))
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-cql", s3Resolver))
   .dependsOn(
-    `storage-partitioner-api` % "compile->compile;test->test"
+    `Storage-partitioner-api` % "compile->compile;test->test"
   )
 
-lazy val `storage-partitioner-druid` = (project in file("src/core/druid"))
+lazy val `Storage-partitioner-druid` = (project in file("src/core/druid"))
   .enablePlugins(CommonPlugin)
-  .dependsOn(`storage-partitioner-api` % "compile->compile;test->test")
+  .dependsOn(`Storage-partitioner-api` % "compile->compile;test->test")
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-druid", s3Resolver))
   .dependsOn(
-    ProjectRef(uri(s"https://github.com/GlobalWebIndex/druid4s.git#v$druid4sVersion"), "druid4s-client") % "compile->compile;test->test"
+    ProjectRef(uri(s"https://github.com/GlobalWebIndex/druid4s.git#v$druid4sVersion"), "Druid4s-client") % "compile->compile;test->test"
   )
 
-lazy val `storage-partitioner-all` = (project in file("src/all"))
+lazy val `Storage-partitioner-all` = (project in file("src/all"))
   .enablePlugins(CommonPlugin)
   .settings(libraryDependencies += sprayJson)
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner", s3Resolver))
   .dependsOn(
-    `storage-partitioner-api` % "compile->compile;test->test",
-    `storage-partitioner-s3` % "compile->compile;test->test",
-    `storage-partitioner-druid` % "compile->compile;test->test",
-    `storage-partitioner-cql` % "compile->compile;test->test"
+    `Storage-partitioner-api` % "compile->compile;test->test",
+    `Storage-partitioner-s3` % "compile->compile;test->test",
+    `Storage-partitioner-druid` % "compile->compile;test->test",
+    `Storage-partitioner-cql` % "compile->compile;test->test"
   )
