@@ -40,8 +40,8 @@ class S3Driver(credentials: AWSCredentialsProvider, regionProvider: AwsRegionPro
 }
 
 object S3Driver {
-  def apply(id: String, key: String, regionProvider: AwsRegionProvider, config: ClientConfiguration = new ClientConfigurationFactory().getConfig)(implicit system: ActorSystem, mat: Materializer): S3Driver =
-    new S3Driver(new AWSStaticCredentialsProvider(new BasicAWSCredentials(id, key)), regionProvider, config)
+  def apply(credentials: AWSCredentialsProvider, regionProvider: AwsRegionProvider, config: ClientConfiguration = new ClientConfigurationFactory().getConfig)(implicit system: ActorSystem, mat: Materializer): S3Driver =
+    new S3Driver(credentials, regionProvider, config)
 
   private def friendlyCachedThreadPoolExecutor(name: String, corePoolFactor: Int, maximumPoolFactor: Int, keepAliveTime: Int) = {
     def availableProcessors = Runtime.getRuntime.availableProcessors
