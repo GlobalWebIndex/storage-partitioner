@@ -5,7 +5,6 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.regions.DefaultAwsRegionProviderChain
-import com.amazonaws.services.s3.S3ClientOptions
 import org.scalatest.{BeforeAndAfterAll, Suite}
 
 import scala.concurrent.duration.{Duration, _}
@@ -25,12 +24,13 @@ trait AkkaSupport extends Suite with BeforeAndAfterAll {
 
 sealed trait S3DriverProvider extends AkkaSupport {
   protected[this] val randomPort: Int = Random.nextInt(1000) + 4000
-  implicit lazy val s3Driver: S3Driver = {
-    val s3 = S3Driver(new AWSStaticCredentialsProvider(new BasicAWSCredentials("foo", "bar")), new DefaultAwsRegionProviderChain)
-    s3.setEndpoint(s"http://localhost:$randomPort")
-    s3.setS3ClientOptions(S3ClientOptions.builder().setPathStyleAccess(true).disableChunkedEncoding().build())
-    s3
-  }
+  implicit lazy val s3Driver: S3Driver =
+    S3Driver(
+      new AWSStaticCredentialsProvider(new BasicAWSCredentials("foo", "bar")),
+      new DefaultAwsRegionProviderChain,
+      endpointUrl = Some(s"http://localhost:$randomPort"),
+      pathStyleAccess = true
+    )
 }
 
 trait FakeS3 extends S3DriverProvider {

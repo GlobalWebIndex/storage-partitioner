@@ -16,7 +16,7 @@ import akka.stream.alpakka.s3.{BufferType, Proxy, S3Settings}
 import akka.stream.scaladsl.{Sink, Source}
 import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.regions.{AwsRegionProvider, Region, Regions}
-import com.amazonaws.services.s3.AmazonS3Client
+import com.amazonaws.services.s3.{AmazonS3Client, S3ClientOptions}
 import com.amazonaws.services.s3.model.{S3ObjectSummary, _}
 import com.amazonaws.{ClientConfiguration, ClientConfigurationFactory}
 import monix.eval.Task
@@ -31,17 +31,23 @@ import scala.util.control.NonFatal
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-class S3Driver(credentials: AWSCredentialsProvider, regionProvider: AwsRegionProvider, config: ClientConfiguration)(implicit system: ActorSystem, val mat: Materializer) extends AmazonS3Client(credentials, config) {
-  def alpakka(bufferType: BufferType, proxy: Option[Proxy] = None, endpointUrl: Option[String] = None, pathStyleAccess: Boolean = false) =
-    new S3Client(
-      new S3Settings(bufferType, proxy, credentials, regionProvider, pathStyleAccess, endpointUrl)
-    )
+class S3Driver(credentials: AWSCredentialsProvider, regionProvider: AwsRegionProvider, config: ClientConfiguration, endpointUrl: Option[String] = None, pathStyleAccess: Boolean = false)
+              (implicit system: ActorSystem, val mat: Materializer) extends AmazonS3Client(credentials, config) {
+  def alpakka(bufferType: BufferType) =
+    new S3Client(new S3Settings(bufferType, proxy = None, credentials, regionProvider, pathStyleAccess, endpointUrl))
   setRegion(Region.getRegion(Regions.fromName(regionProvider.getRegion)))
+  endpointUrl.foreach(setEndpoint)
+  setS3ClientOptions(S3ClientOptions.builder().setPathStyleAccess(pathStyleAccess).disableChunkedEncoding().build())
 }
 
 object S3Driver {
-  def apply(credentials: AWSCredentialsProvider, regionProvider: AwsRegionProvider, config: ClientConfiguration = new ClientConfigurationFactory().getConfig)(implicit system: ActorSystem, mat: Materializer): S3Driver =
-    new S3Driver(credentials, regionProvider, config)
+  def apply(
+     credentials: AWSCredentialsProvider,
+     regionProvider: AwsRegionProvider,
+     config: ClientConfiguration = new ClientConfigurationFactory().getConfig,
+     endpointUrl: Option[String] = None,
+     pathStyleAccess: Boolean = false
+   )(implicit system: ActorSystem, mat: Materializer): S3Driver = new S3Driver(credentials, regionProvider, config, endpointUrl, pathStyleAccess)
 
   private def friendlyCachedThreadPoolExecutor(name: String, corePoolFactor: Int, maximumPoolFactor: Int, keepAliveTime: Int) = {
     def availableProcessors = Runtime.getRuntime.availableProcessors
