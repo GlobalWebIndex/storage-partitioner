@@ -14,7 +14,7 @@ import akka.stream.actor.ActorPublisherMessage.{Cancel, Request}
 import akka.stream.alpakka.s3.scaladsl.S3Client
 import akka.stream.alpakka.s3.{BufferType, Proxy, S3Settings}
 import akka.stream.scaladsl.{Sink, Source}
-import com.amazonaws.auth.{AWSCredentialsProvider, AWSStaticCredentialsProvider, BasicAWSCredentials}
+import com.amazonaws.auth.AWSCredentialsProvider
 import com.amazonaws.regions.{AwsRegionProvider, Region, Regions}
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.{S3ObjectSummary, _}
