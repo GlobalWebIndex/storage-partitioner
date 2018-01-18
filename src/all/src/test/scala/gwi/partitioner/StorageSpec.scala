@@ -1,5 +1,6 @@
 package gwi.partitioner
 
+import com.amazonaws.regions.DefaultAwsRegionProviderChain
 import com.datastax.driver.core.Session
 import gwi.druid.utils.Granularity
 import gwi.druid.client._
@@ -11,7 +12,7 @@ class StorageSpec extends FreeSpec with StorageCodec with AkkaSupport with Match
   val druidS = DruidTimeStorage("foo", DruidSource("bar", "baz", "fuz", "huz", "rw", Set("version-foo"), Map.empty), PlainTimePartitioner(Granularity.HOUR))
   val memS = MemoryTimeStorage("foo", new MemorySource("rw", Set("version-foo"), Seq.empty, Map.empty), PlainTimePartitioner(Granularity.HOUR))
 
-  implicit val s3 = S3Driver("x","y","eu-west-1")
+  implicit val s3 = S3Driver("x","y", new DefaultAwsRegionProviderChain)
   implicit val druid = DruidClient
   implicit val session: Session = null
 

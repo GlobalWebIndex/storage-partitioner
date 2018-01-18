@@ -3,6 +3,7 @@ package gwi.partitioner
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import akka.util.Timeout
+import com.amazonaws.regions.DefaultAwsRegionProviderChain
 import com.amazonaws.services.s3.S3ClientOptions
 import org.scalatest.{BeforeAndAfterAll, Suite}
 
@@ -24,7 +25,7 @@ trait AkkaSupport extends Suite with BeforeAndAfterAll {
 sealed trait S3DriverProvider extends AkkaSupport {
   protected[this] val randomPort: Int = Random.nextInt(1000) + 4000
   implicit lazy val s3Driver: S3Driver = {
-    val s3 = S3Driver("foo", "bar", "eu-west-1")
+    val s3 = S3Driver("foo", "bar", new DefaultAwsRegionProviderChain)
     s3.setEndpoint(s"http://localhost:$randomPort")
     s3.setS3ClientOptions(S3ClientOptions.builder().setPathStyleAccess(true).disableChunkedEncoding().build())
     s3

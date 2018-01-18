@@ -15,7 +15,7 @@ import akka.stream.alpakka.s3.scaladsl.S3Client
 import akka.stream.alpakka.s3.{BufferType, Proxy, S3Settings}
 import akka.stream.scaladsl.{Sink, Source}
 import com.amazonaws.auth.{AWSCredentialsProvider, AWSStaticCredentialsProvider, BasicAWSCredentials}
-import com.amazonaws.regions.{Region, Regions}
+import com.amazonaws.regions.{AwsRegionProvider, Region, Regions}
 import com.amazonaws.services.s3.AmazonS3Client
 import com.amazonaws.services.s3.model.{S3ObjectSummary, _}
 import com.amazonaws.{ClientConfiguration, ClientConfigurationFactory}
@@ -31,17 +31,17 @@ import scala.util.control.NonFatal
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
 
-class S3Driver(credentials: AWSCredentialsProvider, region: Region, config: ClientConfiguration)(implicit system: ActorSystem, val mat: Materializer) extends AmazonS3Client(credentials, config) {
-  def alpakka(bufferType: BufferType, proxy: Option[Proxy] = None, pathStyleAccess: Boolean = false) =
+class S3Driver(credentials: AWSCredentialsProvider, regionProvider: AwsRegionProvider, config: ClientConfiguration)(implicit system: ActorSystem, val mat: Materializer) extends AmazonS3Client(credentials, config) {
+  def alpakka(bufferType: BufferType, proxy: Option[Proxy] = None, endpointUrl: Option[String] = None, pathStyleAccess: Boolean = false) =
     new S3Client(
-      new S3Settings(bufferType, proxy, credentials, region.getName, pathStyleAccess)
+      new S3Settings(bufferType, proxy, credentials, regionProvider, pathStyleAccess, endpointUrl)
     )
-  setRegion(region)
+  setRegion(Region.getRegion(Regions.fromName(regionProvider.getRegion)))
 }
 
 object S3Driver {
-  def apply(id: String, key: String, region: String, config: ClientConfiguration = new ClientConfigurationFactory().getConfig)(implicit system: ActorSystem, mat: Materializer): S3Driver =
-    new S3Driver(new AWSStaticCredentialsProvider(new BasicAWSCredentials(id, key)), Region.getRegion(Regions.fromName(region)), config)
+  def apply(id: String, key: String, regionProvider: AwsRegionProvider, config: ClientConfiguration = new ClientConfigurationFactory().getConfig)(implicit system: ActorSystem, mat: Materializer): S3Driver =
+    new S3Driver(new AWSStaticCredentialsProvider(new BasicAWSCredentials(id, key)), regionProvider, config)
 
   private def friendlyCachedThreadPoolExecutor(name: String, corePoolFactor: Int, maximumPoolFactor: Int, keepAliveTime: Int) = {
     def availableProcessors = Runtime.getRuntime.availableProcessors
