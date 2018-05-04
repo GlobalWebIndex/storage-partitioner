@@ -1,5 +1,6 @@
 package gwi.partitioner
 
+import akka.stream.alpakka.s3.MemoryBufferType
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
 import com.amazonaws.regions.DefaultAwsRegionProviderChain
 import com.datastax.driver.core.Session
@@ -14,6 +15,7 @@ class StorageSpec extends FreeSpec with StorageCodec with AkkaSupport with Match
   val memS = MemoryTimeStorage("foo", new MemorySource("rw", Set("version-foo"), Seq.empty, Map.empty), PlainTimePartitioner(Granularity.HOUR))
 
   implicit val s3 = S3Driver(new AWSStaticCredentialsProvider(new BasicAWSCredentials("x", "y")), new DefaultAwsRegionProviderChain)
+  implicit val s3Client = s3.alpakka(MemoryBufferType)
   implicit val druid = DruidClient
   implicit val session: Session = null
 

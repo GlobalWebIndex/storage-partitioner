@@ -1,5 +1,8 @@
 package gwi.partitioner
 
+import akka.stream.alpakka.s3.MemoryBufferType
+import akka.stream.scaladsl.Source
+import akka.util.ByteString
 import gwi.druid.utils.Granularity
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 import org.scalatest.concurrent.ScalaFutures
@@ -9,7 +12,7 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FreeSpec, Matchers}
 class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   implicit val futurePatience = PatienceConfig(timeout = Span(5, Seconds), interval = Span(500, Millis))
-
+  implicit val s3Client = s3Driver.alpakka(MemoryBufferType)
   private[this] val bucket = "foo"
   private[this] val path = "bar/"
   private[this] val source = S3Source(bucket, path, "rw", Set("version-foo"), Map.empty)
@@ -20,7 +23,8 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
   private[this] def createStorage(storage: S3TimeStorage, partitions: Iterable[TimePartition]): Unit = {
     val client = storage.client
     partitions.foreach { partition =>
-      client.indexData(partition, "test.json", s"""{"timestamp":"${partition.value.getStart.toString}", "foo":"bar"}""")
+      val data = s"""{"timestamp":"${partition.value.getStart.toString}", "foo":"bar"}"""
+      client.indexData(partition, "test.json", Source.single(ByteString(data)), data.length)
       client.markWithSuccess(partition)
     }
   }
@@ -51,6 +55,7 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
     }
     "delete partitions" in {
       plainStorage.client.delete(partitions.head)
+      Thread.sleep(1000)
       whenReady(plainStorage.client.listAll) { actualPartitions =>
         assertResult(partitions.tail)(actualPartitions.sortBy(_.value.toString))
       }

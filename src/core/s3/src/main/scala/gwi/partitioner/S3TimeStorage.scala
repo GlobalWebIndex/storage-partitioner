@@ -1,12 +1,12 @@
 package gwi.partitioner
 
-import java.io.ByteArrayInputStream
-import java.nio.charset.StandardCharsets
 import java.util.regex.Pattern
-
 import akka.Done
+import akka.stream.ActorMaterializer
+import akka.stream.alpakka.s3.impl.S3Headers
+import akka.stream.alpakka.s3.scaladsl.{ObjectMetadata, S3Client}
 import akka.stream.scaladsl.{Sink, Source}
-import com.amazonaws.services.s3.model.ObjectMetadata
+import akka.util.ByteString
 import gwi.druid.utils.Granularity
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone, Interval}
@@ -31,7 +31,7 @@ object S3TimeStorage {
 
   implicit class S3TimeStoragePimp(underlying: S3TimeStorage) {
 
-    def client(implicit driver: S3Driver) = new S3TimeClient {
+    def client(implicit s3: S3Client, mat: ActorMaterializer) = new S3TimeClient {
       private val S3TimeStorage(_, source, partitioner) = underlying
 
       private val permissionError = s"s3://${source.bucket}/${source.path} has not write permissions !!!"
@@ -41,44 +41,45 @@ object S3TimeStorage {
         if (!hasPermissions)
           Future.failed(new IllegalArgumentException(permissionError))
         else
-        Source.fromIterator( () => driver.listKeys(source.bucket, underlying.lift(partition.value).partitionKey).iterator )
-          .mapAsync(16) ( key => Future(driver.deleteObject(source.bucket, key))(S3Driver.cachedScheduler) )
-          .runWith(Sink.ignore)(driver.mat)
+          s3.listBucket(source.bucket, Some(underlying.lift(partition.value).partitionKey))
+          .mapAsync(16) ( result => s3.deleteObject(source.bucket, result.key) )
+          .runWith(Sink.ignore)
 
-      def indexData(partition: TimePartition, fileName: String, content: String): Unit = {
+      def indexData(partition: TimePartition, fileName: String, data: Source[ByteString, _], dataLength: Long): Future[ObjectMetadata] = {
         require(hasPermissions, permissionError)
-        val inputStream = new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8))
-        val metaData = new ObjectMetadata()
-        metaData.setContentLength(content.length)
-        driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(fileName), inputStream, metaData)
+        s3.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(fileName), data, dataLength, s3Headers = S3Headers.empty)
       }
 
-      def markWithSuccess(partition: TimePartition): Future[Done] =
-        Future(driver.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(SuccessFileName), source.meta.mkString("","\n","\n")))(Implicits.global)
+      def markWithSuccess(partition: TimePartition): Future[Done] = {
+        val content = source.meta.mkString("","\n","\n")
+        s3.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(SuccessFileName), Source.single(ByteString(content)), content.length, s3Headers = S3Headers.empty)
           .map(_ => Done)(Implicits.global)
+      }
 
       def listAll: Future[Seq[TimePartition]] =
         list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))
 
       def list(range: Interval): Future[Seq[TimePartition]] = {
         def timePath(time: DateTime) = partitioner.dateToPath(time).split("/").filter(_.nonEmpty)
+
+        def isValidPartition(timePath: TimePartition) =
+          s3.getObjectMetadata(source.bucket, underlying.lift(timePath).partitionFileKey(SuccessFileName)).map(_.nonEmpty)(Implicits.global)
+
         val commonAncestorList =
           timePath(range.getStart).zip(timePath(range.getEnd))
             .takeWhile(p => p._1 == p._2)
             .map(_._1)
 
         val storagePrefix = s"${source.path}${commonAncestorList.mkString("/")}"
-        val pathDepth = partitioner.granularity.arity - commonAncestorList.length
-        def isValidPartition(timePath: TimePartition) = driver.doesObjectExist(source.bucket, underlying.lift(timePath).partitionFileKey(SuccessFileName))
 
-        Source.fromFuture(driver.getRelativeDirPaths(source.bucket, storagePrefix, pathDepth, "/"))
-          .mapConcat(_.toVector)
-          .map(commonAncestorList ++ _)
-          .map(arr => underlying.partitioner.build(underlying.partitioner.pathToInterval(arr.mkString("", "/", "/"))))
+          s3.listBucket(source.bucket, Some(storagePrefix))
+          .map(_.key.split("/").dropRight(1).takeRight(partitioner.granularity.arity).mkString("", "/", "/"))
+          .via(new ElementDeduplication(identity))
+          .map(timePath => underlying.partitioner.build(underlying.partitioner.pathToInterval(timePath)))
           .filter( path => range.contains(path.value) )
-          .mapAsync(64)( path => Future(path -> isValidPartition(path))(S3Driver.cachedScheduler) )
+          .mapAsync(64)( path => isValidPartition(path).map ( validPartition => path -> validPartition)(S3Driver.cachedScheduler) )
           .collect { case (path,isValid) if isValid => path }
-          .runWith(Sink.seq)(driver.mat)
+          .runWith(Sink.seq)
           .map(_.sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 0 })(Implicits.global)
       }
     }
@@ -86,7 +87,7 @@ object S3TimeStorage {
 }
 
 trait S3TimeClient extends TimeClient {
-  def indexData(partition: TimePartition, fileName: String, content: String): Unit
+  def indexData(partition: TimePartition, fileName: String, data: Source[ByteString, _], dataLength: Long): Future[ObjectMetadata]
 }
 
 case class S3TimePartition(bucket: String, path: String, timePath: String, value: Interval) extends StoragePartition[Interval] {
