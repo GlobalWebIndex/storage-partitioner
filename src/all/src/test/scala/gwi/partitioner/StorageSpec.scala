@@ -1,21 +1,16 @@
 package gwi.partitioner
 
-import akka.stream.alpakka.s3.MemoryBufferType
-import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
-import com.amazonaws.regions.DefaultAwsRegionProviderChain
 import com.datastax.driver.core.Session
-import gwi.druid.utils.Granularity
 import gwi.druid.client._
+import gwi.druid.utils.Granularity
 import org.scalatest._
 
-class StorageSpec extends FreeSpec with StorageCodec with AkkaSupport with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
+class StorageSpec extends FreeSpec with S3Mock with StorageCodec with AkkaSupport with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   val s3S = S3TimeStorage("foo", S3Source("bar", "baz/", "rw", Set("version-foo"), Map.empty), S3TimePartitioner.plain(Granularity.HOUR))
   val druidS = DruidTimeStorage("foo", DruidSource("bar", "baz", "fuz", "huz", "rw", Set("version-foo"), Map.empty), PlainTimePartitioner(Granularity.HOUR))
   val memS = MemoryTimeStorage("foo", new MemorySource("rw", Set("version-foo"), Seq.empty, Map.empty), PlainTimePartitioner(Granularity.HOUR))
 
-  implicit val s3 = S3Driver(new AWSStaticCredentialsProvider(new BasicAWSCredentials("x", "y")), new DefaultAwsRegionProviderChain)
-  implicit val s3Client = s3.alpakka(MemoryBufferType)
   implicit val druid = DruidClient
   implicit val session: Session = null
 

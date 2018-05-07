@@ -1,7 +1,6 @@
 package gwi.partitioner
 
-import akka.stream.alpakka.s3.MemoryBufferType
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import gwi.druid.utils.Granularity
 import org.joda.time.{DateTime, DateTimeZone, Interval}
@@ -9,10 +8,12 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FreeSpec, Matchers}
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
+
 class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
 
   implicit val futurePatience = PatienceConfig(timeout = Span(5, Seconds), interval = Span(500, Millis))
-  implicit val s3Client = s3Driver.alpakka(MemoryBufferType)
   private[this] val bucket = "foo"
   private[this] val path = "bar/"
   private[this] val source = S3Source(bucket, path, "rw", Set("version-foo"), Map.empty)
@@ -24,15 +25,16 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
     val client = storage.client
     partitions.foreach { partition =>
       val data = s"""{"timestamp":"${partition.value.getStart.toString}", "foo":"bar"}"""
-      client.indexData(partition, "test.json", Source.single(ByteString(data)), data.length)
-      client.markWithSuccess(partition)
+      Await.ready(client.indexData(partition, "test.json", Source.single(ByteString(data)), data.length), 5.seconds)
+      Await.ready(client.markWithSuccess(partition), 5.seconds)
     }
   }
 
   override def beforeAll(): Unit = try super.beforeAll() finally {
     startS3Container {
-      s3Driver.createBucket(bucket)
+      legacyClient.createBucket(bucket)
       createStorage(plainStorage, partitions)
+      Thread.sleep(500)
     }
   }
 
@@ -49,13 +51,13 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
       whenReady(plainStorage.client.listAll) { actualPartitions =>
         assertResult(partitions)(actualPartitions.sortBy(_.value.toString))
         actualPartitions.map(plainStorage.lift).map(_.partitionFileKey(S3TimeStorage.SuccessFileName)).foreach { successFileKey =>
-          assertResult("version-foo\n")(s3Driver.readObjectStreamAsString(bucket, successFileKey, 128))
+          assertResult("version-foo\n")(Await.result(s3Client.download(bucket, successFileKey)._1.map(_.utf8String).runWith(Sink.head), 5.seconds))
         }
       }
     }
     "delete partitions" in {
       plainStorage.client.delete(partitions.head)
-      Thread.sleep(1000)
+      Thread.sleep(500)
       whenReady(plainStorage.client.listAll) { actualPartitions =>
         assertResult(partitions.tail)(actualPartitions.sortBy(_.value.toString))
       }

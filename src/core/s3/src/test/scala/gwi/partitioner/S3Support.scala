@@ -2,9 +2,14 @@ package gwi.partitioner
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import akka.stream.alpakka.s3.impl.ListBucketVersion1
+import akka.stream.alpakka.s3.scaladsl.S3Client
+import akka.stream.alpakka.s3.{MemoryBufferType, S3Settings}
 import akka.util.Timeout
-import com.amazonaws.auth.{AWSStaticCredentialsProvider, BasicAWSCredentials}
+import com.amazonaws.auth.{AWSStaticCredentialsProvider, AnonymousAWSCredentials}
+import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.regions.DefaultAwsRegionProviderChain
+import com.amazonaws.services.s3.AmazonS3ClientBuilder
 import org.scalatest.{BeforeAndAfterAll, Suite}
 
 import scala.concurrent.duration.{Duration, _}
@@ -22,18 +27,31 @@ trait AkkaSupport extends Suite with BeforeAndAfterAll {
   }
 }
 
-sealed trait S3DriverProvider extends AkkaSupport {
+sealed trait S3ClientProvider extends AkkaSupport {
   protected[this] val randomPort: Int = Random.nextInt(1000) + 4000
-  implicit lazy val s3Driver: S3Driver =
-    S3Driver(
-      new AWSStaticCredentialsProvider(new BasicAWSCredentials("foo", "bar")),
-      new DefaultAwsRegionProviderChain,
-      endpointUrl = Some(s"http://localhost:$randomPort"),
-      pathStyleAccess = true
+  implicit lazy val s3Client =
+    new S3Client(
+      new S3Settings(
+        MemoryBufferType,
+        proxy = None,
+        new AWSStaticCredentialsProvider(new AnonymousAWSCredentials()),
+        new DefaultAwsRegionProviderChain,
+        pathStyleAccess = true,
+        endpointUrl = Some(s"http://localhost:$randomPort"),
+        listBucketApiVersion = ListBucketVersion1.getInstance
+      ),
     )
+
+  val legacyClient = // still needed for creating buckets
+    AmazonS3ClientBuilder
+      .standard()
+      .withPathStyleAccessEnabled(true)
+      .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(s"http://localhost:$randomPort", "eu-west-1"))
+      .withCredentials(new AWSStaticCredentialsProvider(new AnonymousAWSCredentials()))
+      .build()
 }
 
-trait FakeS3 extends S3DriverProvider {
+trait FakeS3 extends S3ClientProvider {
   private def docker(cmd: String) = Array("/bin/sh", "-c", s"docker $cmd")
   private val randomName = s"fake-s3-$randomPort"
 
@@ -50,7 +68,7 @@ trait FakeS3 extends S3DriverProvider {
   }
 }
 
-trait S3Mock extends S3DriverProvider {
+trait S3Mock extends S3ClientProvider {
   private val api = io.findify.s3mock.S3Mock(port = randomPort, dir = "/tmp/s3")
 
   protected[this] def startS3Container(prepare: => Unit): Unit = {

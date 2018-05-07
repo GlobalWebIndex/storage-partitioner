@@ -77,7 +77,7 @@ object S3TimeStorage {
           .via(new ElementDeduplication(identity))
           .map(timePath => underlying.partitioner.build(underlying.partitioner.pathToInterval(timePath)))
           .filter( path => range.contains(path.value) )
-          .mapAsync(64)( path => isValidPartition(path).map ( validPartition => path -> validPartition)(S3Driver.cachedScheduler) )
+          .mapAsyncUnordered(64)( path => isValidPartition(path).map ( validPartition => path -> validPartition)(CachedScheduler.instance) )
           .collect { case (path,isValid) if isValid => path }
           .runWith(Sink.seq)
           .map(_.sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 0 })(Implicits.global)
