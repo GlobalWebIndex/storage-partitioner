@@ -2,7 +2,7 @@ package gwi.partitioner
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.alpakka.s3.impl.ListBucketVersion1
+import akka.stream.alpakka.s3.impl.ListBucketVersion2
 import akka.stream.alpakka.s3.scaladsl.S3Client
 import akka.stream.alpakka.s3.{MemoryBufferType, S3Settings}
 import akka.util.Timeout
@@ -38,7 +38,7 @@ sealed trait S3ClientProvider extends AkkaSupport {
         new DefaultAwsRegionProviderChain,
         pathStyleAccess = true,
         endpointUrl = Some(s"http://localhost:$randomPort"),
-        listBucketApiVersion = ListBucketVersion1.getInstance
+        listBucketApiVersion = ListBucketVersion2.getInstance
       ),
     )
 
