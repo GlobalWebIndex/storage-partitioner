@@ -31,7 +31,7 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
   }
 
   override def beforeAll(): Unit = try super.beforeAll() finally {
-    startS3Container {
+    startS3 {
       legacyClient.createBucket(bucket)
       createStorage(plainStorage, partitions)
       Thread.sleep(500)
@@ -39,7 +39,7 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
   }
 
   override def afterAll(): Unit = try super.afterAll() finally {
-    stopS3Container(())
+    stopS3(())
   }
 
   "S3 time storage should" - {
