@@ -13,11 +13,11 @@ class ElementDeduplication[A, B](extract: A => B)
 
   val shape: FlowShape[A, A] = FlowShape.of(in, out)
 
-  private[this] val cache = mutable.Set.empty[B]
-
   override def createLogic(inheritedAttributes: Attributes): GraphStageLogic =
     new GraphStageLogic(shape) with InHandler with OutHandler {
       setHandlers(in, out, this)
+
+      val cache = mutable.Set.empty[B]
 
       override def onPush(): Unit = {
         val element = grab(in)
