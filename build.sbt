@@ -6,6 +6,9 @@ libraryDependencies in ThisBuild ++= Seq(monix, akkaActor, akkaStream, scalatest
 
 lazy val druid4sVersion = "0.2.5"
 
+lazy val alpakkaGCS = "com.lightbend.akka" %% "akka-stream-alpakka-google-cloud-storage" % "0.16-gcs"
+lazy val alpakkaS3 = "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "0.16-gcs"
+
 lazy val `Storage-partitioner` = (project in file("."))
   .settings(aggregate in update := false)
   .settings(publish := { })
@@ -41,6 +44,16 @@ lazy val `Storage-partitioner-druid` = (project in file("src/core/druid"))
   .dependsOn(
     ProjectRef(uri(s"https://github.com/GlobalWebIndex/druid4s.git#v$druid4sVersion"), "Druid4s-client") % "compile->compile;test->test"
   )
+
+lazy val `Storage-partitioner-gcs` = (project in file("src/core/gcs"))
+  .enablePlugins(CommonPlugin)
+  .settings(libraryDependencies ++= Seq(alpakkaGCS))
+  .settings(publishSettings("GlobalWebIndex", "storage-partitioner-gcs", s3Resolver))
+  .dependsOn(
+    `Storage-partitioner-s3` % "compile->compile;test->test",
+    `Storage-partitioner-api` % "compile->compile;test->test"
+  )
+
 
 lazy val `Storage-partitioner-all` = (project in file("src/all"))
   .enablePlugins(CommonPlugin)
