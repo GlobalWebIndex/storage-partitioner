@@ -44,7 +44,7 @@ object S3TimeStorage {
           .mapAsync(16) ( result => s3.deleteObject(source.bucket, result.key) )
           .runWith(Sink.ignore)
 
-      def indexData(partition: TimePartition, fileName: String, data: Source[ByteString, _], dataLength: Long): Future[ObjectMetadata] = {
+      def indexData(partition: TimePartition, fileName: String, data: Source[ByteString, _], dataLength: Long): Future[Done] = {
         require(hasPermissions, permissionError)
         s3.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(fileName), data, dataLength)
       }
@@ -86,7 +86,7 @@ object S3TimeStorage {
 }
 
 trait S3TimeClient extends TimeClient {
-  def indexData(partition: TimePartition, fileName: String, data: Source[ByteString, _], dataLength: Long): Future[ObjectMetadata]
+  def indexData(partition: TimePartition, fileName: String, data: Source[ByteString, _], dataLength: Long): Future[Done]
 }
 
 case class S3TimePartition(bucket: String, path: String, timePath: String, value: Interval) extends StoragePartition[Interval] {

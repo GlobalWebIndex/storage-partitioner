@@ -1,7 +1,6 @@
 package gwi
 
 import akka.stream.ActorMaterializer
-import akka.stream.alpakka.s3.scaladsl.S3Client
 import com.datastax.driver.core.Session
 import gwi.druid.client.DruidClient
 
@@ -18,5 +17,4 @@ package object partitioner {
       case s: CqlTimeStorage => s.client(session, mat)
     }
   }
-
 }

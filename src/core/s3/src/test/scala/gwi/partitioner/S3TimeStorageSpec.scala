@@ -51,7 +51,7 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
       whenReady(plainStorage.client.listAll) { actualPartitions =>
         assertResult(partitions)(actualPartitions.sortBy(_.value.toString))
         actualPartitions.map(plainStorage.lift).map(_.partitionFileKey(S3TimeStorage.SuccessFileName)).foreach { successFileKey =>
-          assertResult("version-foo\n")(Await.result(s3Client.download(bucket, successFileKey)._1.map(_.utf8String).runWith(Sink.head), 5.seconds))
+          assertResult("version-foo\n")(Await.result(s3Client.download(bucket, successFileKey).map(_.utf8String).runWith(Sink.head), 5.seconds))
         }
       }
     }
