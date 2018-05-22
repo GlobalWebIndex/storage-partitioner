@@ -1,4 +1,7 @@
 package gwi.partitioner
+import akka.actor.ActorSystem
+import akka.stream.Materializer
+import akka.stream.alpakka.s3.S3Settings
 import akka.stream.alpakka.s3.impl.S3Headers
 import akka.stream.alpakka.s3.scaladsl.{S3Client => AlpakkaS3Client}
 import akka.stream.scaladsl.{Sink, Source}
@@ -53,5 +56,14 @@ class S3ClientLike(s3Client: AlpakkaS3Client) extends S3Client {
 }
 
 object S3ClientLike {
+
+  def apply()(implicit system: ActorSystem, mat: Materializer): S3ClientLike = {
+    S3ClientLike(AlpakkaS3Client())
+  }
+
+  def apply(s3Settings: S3Settings)(implicit system: ActorSystem, mat: Materializer): S3ClientLike = {
+    S3ClientLike(new AlpakkaS3Client(s3Settings))
+  }
+
   def apply(s3Client: AlpakkaS3Client): S3ClientLike = new S3ClientLike(s3Client)
 }
