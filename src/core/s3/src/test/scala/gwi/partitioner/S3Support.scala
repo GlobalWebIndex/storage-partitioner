@@ -2,7 +2,6 @@ package gwi.partitioner
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import akka.stream.alpakka.s3.impl.ListBucketVersion2
 import akka.stream.alpakka.s3.scaladsl.S3Client
 import akka.stream.alpakka.s3.{MemoryBufferType, S3Settings}
 import akka.util.Timeout
@@ -54,7 +53,7 @@ trait AkkaSupport extends Suite with BeforeAndAfterAll {
 sealed trait S3ClientProvider extends AkkaSupport {
   protected[this] val randomPort: Int = Random.nextInt(1000) + 4000
   protected[this] implicit lazy val s3Client =
-    new S3Client(
+    new akka.stream.alpakka.s3.scaladsl.S3Client(
       new S3Settings(
         MemoryBufferType,
         proxy = None,
@@ -62,7 +61,7 @@ sealed trait S3ClientProvider extends AkkaSupport {
         new DefaultAwsRegionProviderChain,
         pathStyleAccess = true,
         endpointUrl = Some(s"http://localhost:$randomPort"),
-        listBucketApiVersion = ListBucketVersion2.getInstance
+//        listBucketApiVersion = ListBucketVersion2.getInstance
       ),
     )
 

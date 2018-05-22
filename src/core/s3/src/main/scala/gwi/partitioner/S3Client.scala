@@ -1,7 +1,5 @@
 package gwi.partitioner
 
-import akka.stream.alpakka.s3.impl._
-import akka.stream.alpakka.s3.scaladsl.ObjectMetadata
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
@@ -15,12 +13,9 @@ trait S3Client {
     *
     * @param bucket the bucket name
     * @param key the object key
-    * @param sse the server side encryption to use
     * @return A [[Future]] containing a false in case the object does not exist
     */
-  def exists(bucket: String,
-    key: String,
-    sse: Option[ServerSideEncryption] = None): Future[Boolean]
+  def exists(bucket: String, key: String): Future[Boolean]
 
   /**
     * Deletes an Object
@@ -32,7 +27,7 @@ trait S3Client {
   def deleteObject(bucket: String, key: String): Future[Done]
 
   /**
-    * Uploads an Object, use this for small files and [[StorageObject]] for bigger ones
+    * Uploads an Object, use this for small files and [[ObjectMetadata]] for bigger ones
     *
     * @param bucket the bucket name
     * @param key the object key
@@ -43,7 +38,7 @@ trait S3Client {
   def putObject(bucket: String,
     key: String,
     data: Source[ByteString, _],
-    contentLength: Long): Future[StorageObject]
+    contentLength: Long): Future[Done]
 
   /**
     * Downloads an Object
@@ -60,9 +55,9 @@ trait S3Client {
     *
     * @param bucket Which bucket that you list object metadata for
     * @param prefix Prefix of the keys you want to list under passed bucket
-    * @return [[Source]] of [[StorageObject]]
+    * @return [[Source]] of [[ObjectMetadata]]
     */
-  def listBucket(bucket: String, prefix: Option[String]): Source[StorageObject, NotUsed]
+  def listBucket(bucket: String, prefix: Option[String]): Source[ObjectMetadata, NotUsed]
 
   /**
     * Uploads aa Object by making multiple requests
@@ -70,16 +65,16 @@ trait S3Client {
     * @param bucket the bucket name
     * @param key the object key
     * @param chunkSize the size of the requests sent to a storage
-    * @return a [[Sink]] that accepts [[ByteString]]'s and materializes to a [[Future]] of [[StorageObject]]
+    * @return a [[Sink]] that accepts [[ByteString]]'s and materializes to a [[Future]] of [[ObjectMetadata]]
     */
   def multipartUpload(bucket: String,
     key: String,
-    chunkSize: Option[Int] = None): Sink[ByteString, Future[StorageObject]]
+    chunkSize: Option[Int] = None): Sink[ByteString, Future[Done]]
 }
 
-final case class StorageObject(
+final case class ObjectMetadata(
   bucket: String,
-  name: String,
+  key: String,
   size: Option[String],
   etag: String
 )
