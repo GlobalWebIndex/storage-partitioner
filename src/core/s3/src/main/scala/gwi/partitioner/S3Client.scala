@@ -33,7 +33,7 @@ trait S3Client {
     * @param key the object key
     * @param data a [[Stream]] of [[ByteString]]
     * @param contentLength the number of bytes that will be uploaded (required!)
-    * @return a [[Future]] containing the [[ObjectMetadata]] of the uploaded Object
+    * @return a [[Future]] containing the [[Done]]
     */
   def putObject(bucket: String,
     key: String,
@@ -57,15 +57,15 @@ trait S3Client {
     * @param prefix Prefix of the keys you want to list under passed bucket
     * @return [[Source]] of [[ObjectMetadata]]
     */
-  def listBucket(bucket: String, prefix: Option[String]): Source[ObjectMetadata, NotUsed]
+  def listBucket(bucket: String, prefix: Option[String] = None): Source[ObjectMetadata, NotUsed]
 
   /**
-    * Uploads aa Object by making multiple requests
+    * Uploads an Object by making multiple requests
     *
     * @param bucket the bucket name
     * @param key the object key
     * @param chunkSize the size of the requests sent to a storage
-    * @return a [[Sink]] that accepts [[ByteString]]'s and materializes to a [[Future]] of [[ObjectMetadata]]
+    * @return a [[Sink]] that accepts [[ByteString]]'s and materializes to a [[Future]] of [[Done]]
     */
   def multipartUpload(bucket: String,
     key: String,
