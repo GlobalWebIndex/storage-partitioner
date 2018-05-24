@@ -10,10 +10,11 @@ import akka.util.ByteString
 import akka.{Done, NotUsed}
 import gwi.partitioner.{ObjectMetadata, S3Client}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-class S3ClientGcsWrapper(gcsClient: GoogleCloudStorageClient) extends S3Client {
+class AlpakkaGcsS3ClientWrapper(gcsClient: GoogleCloudStorageClient)(implicit materializer: Materializer) extends S3Client {
 
   override def exists(bucket: String, key: String): Future[Boolean] = {
     gcsClient.exists(bucket, key)
@@ -58,13 +59,17 @@ class S3ClientGcsWrapper(gcsClient: GoogleCloudStorageClient) extends S3Client {
   }
 }
 
-object S3ClientGcsWrapper {
+object AlpakkaGcsS3ClientWrapper {
 
   def apply(
     authConfiguration: GoogleAuthConfiguration
-  )(implicit system: ActorSystem, mat: Materializer): S3ClientGcsWrapper = {
-    S3ClientGcsWrapper(GoogleCloudStorageClient(authConfiguration))
+  )(implicit system: ActorSystem, mat: Materializer): AlpakkaGcsS3ClientWrapper = {
+    AlpakkaGcsS3ClientWrapper(GoogleCloudStorageClient(authConfiguration))
   }
 
-  def apply(googleCloudStorageClient: GoogleCloudStorageClient) = new S3ClientGcsWrapper(googleCloudStorageClient)
+  def apply(
+    googleCloudStorageClient: GoogleCloudStorageClient
+  )(implicit materializer: Materializer): AlpakkaGcsS3ClientWrapper = {
+    new AlpakkaGcsS3ClientWrapper(googleCloudStorageClient)
+  }
 }

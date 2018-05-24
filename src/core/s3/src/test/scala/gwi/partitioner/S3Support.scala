@@ -1,17 +1,11 @@
 package gwi.partitioner
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import akka.stream.alpakka.s3.{MemoryBufferType, S3Settings}
-import akka.util.Timeout
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, AnonymousAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder
 import com.amazonaws.regions.DefaultAwsRegionProviderChain
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
-import org.scalatest.{BeforeAndAfterAll, Suite}
 
-import scala.concurrent.duration.{Duration, _}
-import scala.concurrent.{Await, ExecutionContext, Future}
 import scala.sys.process.Process
 import scala.util.{Random, Try}
 
@@ -39,20 +33,10 @@ trait DockerSupport {
   }
 }
 
-trait AkkaSupport extends Suite with BeforeAndAfterAll {
-  protected[this] implicit val timeout = Timeout(10.seconds)
-  protected[this] implicit lazy val system = ActorSystem("AkkaSuiteSystem")
-  protected[this] implicit lazy val materializer = ActorMaterializer()
-
-  override def afterAll(): Unit = try super.afterAll() finally {
-    Await.ready(Future(system.terminate())(ExecutionContext.global), Duration.Inf)
-  }
-}
-
 sealed trait S3ClientProvider extends AkkaSupport {
   protected[this] val randomPort: Int = Random.nextInt(1000) + 4000
   protected[this] implicit lazy val s3Client =
-    S3ClientLike(
+    AlpakkaS3Client(
       new S3Settings(
         MemoryBufferType,
         proxy = None,
