@@ -3,7 +3,6 @@ import akka.actor.ActorSystem
 import akka.stream.Materializer
 import akka.stream.alpakka.s3.S3Settings
 import akka.stream.alpakka.s3.impl.S3Headers
-import akka.stream.alpakka.s3.scaladsl.{S3Client => AlpakkaS3Client}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
@@ -11,7 +10,7 @@ import akka.{Done, NotUsed}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class S3ClientLike(s3Client: AlpakkaS3Client) extends S3Client {
+class AlpakkaS3Client(s3Client: akka.stream.alpakka.s3.scaladsl.S3Client) extends S3Client {
 
   override def exists(bucket: String, key: String): Future[Boolean] = {
     s3Client.getObjectMetadata(bucket, key).map(_.nonEmpty)
@@ -50,20 +49,21 @@ class S3ClientLike(s3Client: AlpakkaS3Client) extends S3Client {
     key: String,
     chunkSize: Option[Int]
   ): Sink[ByteString, Future[Done]] = {
-    s3Client.multipartUpload(bucket, key, chunkSize = chunkSize.getOrElse(AlpakkaS3Client.MinChunkSize))
+    val minChunkSize = akka.stream.alpakka.s3.scaladsl.S3Client.MinChunkSize
+    s3Client.multipartUpload(bucket, key, chunkSize = chunkSize.getOrElse(minChunkSize))
       .mapMaterializedValue(f => f.map(_ => Done))
   }
 }
 
-object S3ClientLike {
+object AlpakkaS3Client {
 
-  def apply()(implicit system: ActorSystem, mat: Materializer): S3ClientLike = {
-    S3ClientLike(AlpakkaS3Client())
+  def apply()(implicit system: ActorSystem, mat: Materializer): AlpakkaS3Client = {
+    AlpakkaS3Client(akka.stream.alpakka.s3.scaladsl.S3Client())
   }
 
-  def apply(s3Settings: S3Settings)(implicit system: ActorSystem, mat: Materializer): S3ClientLike = {
-    S3ClientLike(new AlpakkaS3Client(s3Settings))
+  def apply(s3Settings: S3Settings)(implicit system: ActorSystem, mat: Materializer): AlpakkaS3Client = {
+    AlpakkaS3Client(new akka.stream.alpakka.s3.scaladsl.S3Client(s3Settings))
   }
 
-  def apply(s3Client: AlpakkaS3Client): S3ClientLike = new S3ClientLike(s3Client)
+  def apply(s3Client: akka.stream.alpakka.s3.scaladsl.S3Client): AlpakkaS3Client = new AlpakkaS3Client(s3Client)
 }

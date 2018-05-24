@@ -1,15 +1,16 @@
 package gwi.partitioner
 
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Compression, Source}
 import akka.util.ByteString
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Millis, Seconds, Span}
 import org.scalatest.{FreeSpec, Matchers}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.Random
 
-trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures {
+trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures with AkkaSupport {
   import S3ClientSpec._
 
   protected[this] def s3Client: S3Client
@@ -60,10 +61,10 @@ trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures {
       } yield (uploaded, downloaded)
 
       val (uploaded, downloaded) = res.futureValue
-      uploaded.content shouldEqual downloaded
+      downloaded shouldEqual uploaded.content
     }
 
-    "list bucket" in {
+    "list a bucket" in {
       val res = for {
         before <- s3Client.listBucket(bucket).runFold(Seq(): Seq[ObjectMetadata])((s, o) => o +: s)
         _ <- uploadFile()
@@ -74,15 +75,17 @@ trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures {
       before.size shouldEqual (after.size - 1)
     }
 
-    "upload an object by making multiple requests" in {
-      val f = genFile()
-      val res = for {
-        _ <- Source.single(f.content).runWith(s3Client.multipartUpload(bucket, f.name))
-        exists <- s3Client.exists(bucket, f.name)
-      } yield exists
-
-      res.futureValue shouldBe true
-    }
+//    "upload an object by making multiple requests" in {
+//      val f = genFile()
+//      val res = for {
+//        _ <- Source.single(f.content)
+//          .via(Compression.gzip)
+//          .runWith(s3Client.multipartUpload(bucket, f.name))
+//        exists <- s3Client.exists(bucket, f.name)
+//      } yield exists
+//
+//      res.futureValue shouldBe true
+//    }
   }
 
   protected[this] def uploadFile(): Future[File] = {
