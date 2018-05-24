@@ -1,6 +1,6 @@
 package gwi.partitioner
 
-import akka.stream.scaladsl.{Compression, Source}
+import akka.stream.scaladsl.Source
 import akka.util.ByteString
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.time.{Millis, Seconds, Span}

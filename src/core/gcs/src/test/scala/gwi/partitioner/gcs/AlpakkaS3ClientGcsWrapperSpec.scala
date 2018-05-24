@@ -20,6 +20,6 @@ class AlpakkaS3ClientGcsWrapperSpec extends S3ClientSpec with AkkaSupport {
   override protected[this] def bucket: String = "gwiq-storage-partitioner-test"
 
   override protected def beforeAll(): Unit = try super.beforeAll() finally {
-    Await.ready(gcsClient.deleteFolder(bucket, ""), 10 seconds)
+    Await.ready(gcsClient.deleteFolder(bucket, ""), 10.seconds)
   }
 }
