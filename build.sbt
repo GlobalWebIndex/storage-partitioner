@@ -12,7 +12,7 @@ lazy val alpakkaS3 = "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "0.16-gc
 lazy val `Storage-partitioner` = (project in file("."))
   .settings(aggregate in update := false)
   .settings(publish := { })
-  .aggregate(`Storage-partitioner-api`, `Storage-partitioner-s3`, `Storage-partitioner-druid`, `Storage-partitioner-all`)
+  .aggregate(`Storage-partitioner-api`, `Storage-partitioner-s3`, `Storage-partitioner-druid`, `Storage-partitioner-all`, `Storage-partitioner-gcs`)
 
 lazy val `Storage-partitioner-api` = (project in file("src/api"))
   .enablePlugins(CommonPlugin)

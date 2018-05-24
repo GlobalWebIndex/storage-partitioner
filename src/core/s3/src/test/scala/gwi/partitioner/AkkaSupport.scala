@@ -6,7 +6,7 @@ import akka.stream.ActorMaterializer
 import akka.util.Timeout
 import org.scalatest.{BeforeAndAfterAll, Suite}
 
-import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 trait AkkaSupport extends Suite with BeforeAndAfterAll {
