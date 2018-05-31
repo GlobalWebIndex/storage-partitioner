@@ -1,5 +1,7 @@
 package gwi.partitioner.gcs
 
+import java.nio.file.Paths
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.ContentTypes
 import akka.stream.Materializer
@@ -61,6 +63,8 @@ class AlpakkaGcsS3ClientWrapper(gcsClient: GoogleCloudStorageClient)(implicit ma
 
 object AlpakkaGcsS3ClientWrapper {
 
+  val googleAppCredentials = "GOOGLE_APPLICATION_CREDENTIALS"
+
   def apply(
     authConfiguration: GoogleAuthConfiguration
   )(implicit system: ActorSystem, mat: Materializer): AlpakkaGcsS3ClientWrapper = {
@@ -72,4 +76,12 @@ object AlpakkaGcsS3ClientWrapper {
   )(implicit materializer: Materializer): AlpakkaGcsS3ClientWrapper = {
     new AlpakkaGcsS3ClientWrapper(googleCloudStorageClient)
   }
+
+  def apply()(implicit system: ActorSystem, mat: Materializer): AlpakkaGcsS3ClientWrapper = {
+    val path = Paths.get(credentialsPath.getOrElse(throw new Exception(s"No key found in $googleAppCredentials env!")))
+    val config = GoogleAuthConfiguration(path)
+    AlpakkaGcsS3ClientWrapper(config)
+  }
+
+  def credentialsPath: Option[String] = sys.env.get(googleAppCredentials)
 }
