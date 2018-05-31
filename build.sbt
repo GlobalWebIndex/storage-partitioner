@@ -63,5 +63,6 @@ lazy val `Storage-partitioner-all` = (project in file("src/all"))
     `Storage-partitioner-api` % "compile->compile;test->test",
     `Storage-partitioner-s3` % "compile->compile;test->test",
     `Storage-partitioner-druid` % "compile->compile;test->test",
-    `Storage-partitioner-cql` % "compile->compile;test->test"
+    `Storage-partitioner-cql` % "compile->compile;test->test",
+    `Storage-partitioner-gcs` % "compile->compile;test->test"
   )
