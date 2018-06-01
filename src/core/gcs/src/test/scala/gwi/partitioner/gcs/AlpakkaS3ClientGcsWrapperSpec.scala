@@ -18,5 +18,7 @@ class AlpakkaS3ClientGcsWrapperSpec extends S3ClientSpec with AkkaSupport {
     Await.ready(res, 10.seconds)
   }
 
-  override protected[this] def ignore: Boolean = AlpakkaGcsS3ClientWrapper.credentialsPath.isEmpty
+  override protected[this] def ignore(name: String): Boolean = {
+    AlpakkaGcsS3ClientWrapper.credentialsPath.isEmpty
+  }
 }

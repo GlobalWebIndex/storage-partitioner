@@ -1,6 +1,6 @@
 package gwi.partitioner
 
-import akka.stream.scaladsl.Source
+import akka.stream.scaladsl.{Compression, Source}
 import akka.util.ByteString
 import org.scalactic.source.Position
 import org.scalatest.concurrent.ScalaFutures
@@ -17,7 +17,7 @@ trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures with AkkaSup
   protected[this] def s3Client: S3Client
   protected[this] def bucket: String
 
-  protected[this] def ignore: Boolean = false
+  protected[this] def ignore(name: String): Boolean = false
 
   protected[this] implicit val defaultPatience: PatienceConfig =
     PatienceConfig(timeout = Span(10, Seconds), interval = Span(10, Millis))
@@ -78,17 +78,19 @@ trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures with AkkaSup
       before.size shouldEqual (after.size - 1)
     }
 
-//    "upload an object by making multiple requests" in {
-//      val f = genFile()
-//      val res = for {
-//        _ <- Source.single(f.content)
-//          .via(Compression.gzip)
-//          .runWith(s3Client.multipartUpload(bucket, f.name))
-//        exists <- s3Client.exists(bucket, f.name)
-//      } yield exists
-//
-//      res.futureValue shouldBe true
-//    }
+    "upload an object by making multiple requests" inIgnorable {
+      val f = genFile()
+      val res = for {
+        _ <- Source.single(f.content)
+          .via(Compression.gzip)
+          .runWith(s3Client.multipartUpload(bucket, f.name))
+        downloaded <- s3Client.download(bucket, f.name)
+          .via(Compression.gunzip())
+          .runFold(ByteString.empty)(_ ++ _)
+      } yield downloaded
+
+      res.futureValue shouldEqual f.content
+    }
   }
 
   protected[this] def uploadFile(): Future[File] = {
@@ -105,7 +107,7 @@ trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures with AkkaSup
 
   implicit class StringExt(wordSpecStringWrapper: String) {
     def inIgnorable(f: => Any /* Assertion */ )(implicit pos: Position): Unit =
-      if (ignore) {
+      if (ignore(wordSpecStringWrapper)) {
         wordSpecStringWrapper.ignore(f)
       } else {
         wordSpecStringWrapper.in(f)

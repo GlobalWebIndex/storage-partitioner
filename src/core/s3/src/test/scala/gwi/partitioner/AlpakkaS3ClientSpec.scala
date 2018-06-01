@@ -14,4 +14,8 @@ class AlpakkaS3ClientSpec extends S3ClientSpec with FakeS3 {
   override def afterAll(): Unit = try super.afterAll() finally {
     stopS3(())
   }
+
+  override protected[this] def ignore(name: String): Boolean = {
+    name == "upload an object by making multiple requests"
+  }
 }
