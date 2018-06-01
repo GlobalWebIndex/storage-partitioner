@@ -1,5 +1,6 @@
 package gwi.partitioner
 
+import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
@@ -69,7 +70,8 @@ trait S3Client {
     */
   def multipartUpload(bucket: String,
     key: String,
-    chunkSize: Option[Int] = None): Sink[ByteString, Future[Done]]
+    chunkSize: Option[Int] = None,
+    contentType: ContentType = ContentTypes.`application/octet-stream`): Sink[ByteString, Future[Done]]
 }
 
 final case class ObjectMetadata(

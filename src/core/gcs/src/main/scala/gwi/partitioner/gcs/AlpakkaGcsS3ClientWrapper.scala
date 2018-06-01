@@ -3,7 +3,7 @@ package gwi.partitioner.gcs
 import java.nio.file.Paths
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.ContentTypes
+import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import akka.stream.Materializer
 import akka.stream.alpakka.googlecloud.storage.GoogleAuthConfiguration
 import akka.stream.alpakka.googlecloud.storage.impl.GoogleCloudStorageClient
@@ -55,8 +55,13 @@ class AlpakkaGcsS3ClientWrapper(gcsClient: GoogleCloudStorageClient)(implicit ma
     }
   }
 
-  override def multipartUpload(bucket: String, key: String, chunkSize: Option[Int]): Sink[ByteString, Future[Done]] = {
-    gcsClient.createUploadSink(bucket, key, ContentTypes.`text/plain(UTF-8)`, chunkSize.getOrElse(5 * 1024 * 1024))
+  override def multipartUpload(
+    bucket: String,
+    key: String,
+    chunkSize: Option[Int] = None,
+    contentType: ContentType = ContentTypes.`application/octet-stream`
+  ): Sink[ByteString, Future[Done]] = {
+    gcsClient.createUploadSink(bucket, key, contentType, chunkSize.getOrElse(5 * 1024 * 1024))
       .mapMaterializedValue(f => f.map(_ => Done))
   }
 }
