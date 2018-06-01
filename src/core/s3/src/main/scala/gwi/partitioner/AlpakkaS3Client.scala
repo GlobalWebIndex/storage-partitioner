@@ -1,5 +1,6 @@
 package gwi.partitioner
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.{ContentType, ContentTypes}
 import akka.stream.Materializer
 import akka.stream.alpakka.s3.S3Settings
 import akka.stream.alpakka.s3.impl.S3Headers
@@ -47,10 +48,11 @@ class AlpakkaS3Client(s3Client: akka.stream.alpakka.s3.scaladsl.S3Client) extend
   override def multipartUpload(
     bucket: String,
     key: String,
-    chunkSize: Option[Int]
+    chunkSize: Option[Int] = None,
+    contentType: ContentType = ContentTypes.`application/octet-stream`
   ): Sink[ByteString, Future[Done]] = {
     val minChunkSize = akka.stream.alpakka.s3.scaladsl.S3Client.MinChunkSize
-    s3Client.multipartUpload(bucket, key, chunkSize = chunkSize.getOrElse(minChunkSize))
+    s3Client.multipartUpload(bucket, key, contentType, chunkSize = chunkSize.getOrElse(minChunkSize))
       .mapMaterializedValue(f => f.map(_ => Done))
   }
 }
