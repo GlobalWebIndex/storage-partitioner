@@ -16,6 +16,7 @@ cache:
 branches:
   only:
     - master
+    - gcs
 notifications:
   email:
     recipients:
