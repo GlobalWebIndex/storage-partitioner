@@ -30,5 +30,5 @@ before_script:
 script:
 - sbt ++$TRAVIS_SCALA_VERSION clean test
 env:
-- GOOGLE_APPLICATION_CREDENTIALS=${HOME}/gce-key.json
+- GOOGLE_APPLICATION_CREDENTIALS=${TRAVIS_BUILD_DIR}/gce-key.json
 
