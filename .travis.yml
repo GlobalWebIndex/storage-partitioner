@@ -16,7 +16,6 @@ cache:
 branches:
   only:
   - master
-  - travis-credentials
 notifications:
   email:
     recipients:
