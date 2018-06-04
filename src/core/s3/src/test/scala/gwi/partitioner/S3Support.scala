@@ -43,8 +43,7 @@ sealed trait S3ClientProvider extends AkkaSupport {
         new AWSStaticCredentialsProvider(new AnonymousAWSCredentials()),
         new DefaultAwsRegionProviderChain,
         pathStyleAccess = true,
-        endpointUrl = Some(s"http://localhost:$randomPort"),
-//        listBucketApiVersion = ListBucketVersion2.getInstance
+        endpointUrl = Some(s"http://localhost:$randomPort")
       )
     )
 
