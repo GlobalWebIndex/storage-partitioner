@@ -22,3 +22,6 @@ project/boot/
 
 **/deploy/bin
 nohup.out
+
+gce-key.json
+

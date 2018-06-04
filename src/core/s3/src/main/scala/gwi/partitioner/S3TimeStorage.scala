@@ -1,10 +1,9 @@
 package gwi.partitioner
 
 import java.util.regex.Pattern
+
 import akka.Done
 import akka.stream.ActorMaterializer
-import akka.stream.alpakka.s3.impl.S3Headers
-import akka.stream.alpakka.s3.scaladsl.{ObjectMetadata, S3Client}
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import gwi.druid.utils.Granularity
@@ -45,14 +44,14 @@ object S3TimeStorage {
           .mapAsync(16) ( result => s3.deleteObject(source.bucket, result.key) )
           .runWith(Sink.ignore)
 
-      def indexData(partition: TimePartition, fileName: String, data: Source[ByteString, _], dataLength: Long): Future[ObjectMetadata] = {
+      def indexData(partition: TimePartition, fileName: String, data: Source[ByteString, _], dataLength: Long): Future[Done] = {
         require(hasPermissions, permissionError)
-        s3.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(fileName), data, dataLength, s3Headers = S3Headers.empty)
+        s3.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(fileName), data, dataLength)
       }
 
       def markWithSuccess(partition: TimePartition): Future[Done] = {
         val content = source.meta.mkString("","\n","\n")
-        s3.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(SuccessFileName), Source.single(ByteString(content)), content.length, s3Headers = S3Headers.empty)
+        s3.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(SuccessFileName), Source.single(ByteString(content)), content.length)
           .map(_ => Done)(Implicits.global)
       }
 
@@ -63,7 +62,7 @@ object S3TimeStorage {
         def timePath(time: DateTime) = partitioner.dateToPath(time).split("/").filter(_.nonEmpty)
 
         def isValidPartition(timePath: TimePartition) =
-          s3.getObjectMetadata(source.bucket, underlying.lift(timePath).partitionFileKey(SuccessFileName)).map(_.nonEmpty)(Implicits.global)
+          s3.exists(source.bucket, underlying.lift(timePath).partitionFileKey(SuccessFileName))
 
         val commonAncestorList =
           timePath(range.getStart).zip(timePath(range.getEnd))
@@ -87,7 +86,7 @@ object S3TimeStorage {
 }
 
 trait S3TimeClient extends TimeClient {
-  def indexData(partition: TimePartition, fileName: String, data: Source[ByteString, _], dataLength: Long): Future[ObjectMetadata]
+  def indexData(partition: TimePartition, fileName: String, data: Source[ByteString, _], dataLength: Long): Future[Done]
 }
 
 case class S3TimePartition(bucket: String, path: String, timePath: String, value: Interval) extends StoragePartition[Interval] {
