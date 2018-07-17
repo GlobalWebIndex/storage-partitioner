@@ -1,10 +1,10 @@
-version in ThisBuild := "0.3.9"
+version in ThisBuild := "0.4.0"
 
 crossScalaVersions in ThisBuild := Seq("2.12.4", "2.11.8")
 organization in ThisBuild := "net.globalwebindex"
 libraryDependencies in ThisBuild ++= Seq(monix, akkaActor, akkaStream, scalatest, scalameter, loggingImplLog4j % "test") ++ jodaTime
 
-lazy val druid4sVersion = "0.2.6"
+lazy val druid4sVersion = "0.2.7"
 
 lazy val alpakkaGCS = "com.lightbend.akka" %% "akka-stream-alpakka-google-cloud-storage" % "0.16-gcs"
 lazy val alpakkaS3 = "com.lightbend.akka" %% "akka-stream-alpakka-s3" % "0.16-gcs"
