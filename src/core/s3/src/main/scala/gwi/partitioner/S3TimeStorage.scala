@@ -6,7 +6,7 @@ import akka.Done
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
-import gwi.druid.utils.Granularity
+import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 
@@ -25,7 +25,7 @@ case class S3TimeStorage(id: String, source: S3Source, partitioner: S3TimePartit
   def lift(i: Interval): S3TimePartition = lift(i.getStart)
 }
 
-object S3TimeStorage {
+object S3TimeStorage extends LazyLogging {
   val SuccessFileName = ".success"
 
   implicit class S3TimeStoragePimp(underlying: S3TimeStorage) {
@@ -71,7 +71,9 @@ object S3TimeStorage {
 
         val storagePrefix = s"${source.path}${commonAncestorList.mkString("/")}"
 
-          s3.listBucket(source.bucket, Some(storagePrefix))
+        logger.info(s"Listing bucket ${source.bucket} with prefix $storagePrefix")
+
+        s3.listBucket(source.bucket, Some(storagePrefix))
           .map(_.key.split("/").dropRight(1).takeRight(partitioner.granularity.arity).mkString("", "/", "/"))
           .via(new ElementDeduplication(identity))
           .map(timePath => underlying.partitioner.build(underlying.partitioner.pathToInterval(timePath)))
@@ -79,7 +81,10 @@ object S3TimeStorage {
           .mapAsyncUnordered(64)( path => isValidPartition(path).map ( validPartition => path -> validPartition)(CachedScheduler.instance) )
           .collect { case (path,isValid) if isValid => path }
           .runWith(Sink.seq)
-          .map(_.sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 0 })(Implicits.global)
+          .map { partitions =>
+            logger.info(s"${partitions.size} partitions listed ...")
+            partitions.sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 0 }
+          }(Implicits.global)
       }
     }
   }

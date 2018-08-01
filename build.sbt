@@ -1,8 +1,8 @@
-version in ThisBuild := "0.4.1"
+version in ThisBuild := "0.4.2"
 
 crossScalaVersions in ThisBuild := Seq("2.12.4", "2.11.8")
 organization in ThisBuild := "net.globalwebindex"
-libraryDependencies in ThisBuild ++= Seq(monix, akkaActor, akkaStream, scalatest, scalameter, loggingImplLog4j % "test") ++ jodaTime
+libraryDependencies in ThisBuild ++= Seq(monix, akkaActor, akkaStream, scalatest, scalameter, loggingImplLog4j % "test") ++ jodaTime ++ loggingApi
 
 lazy val druid4sVersion = "0.2.8"
 
