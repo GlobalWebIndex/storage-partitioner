@@ -9,7 +9,7 @@ import akka.util.ByteString
 import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone, Interval}
-
+import gwi.druid.utils.Granularity
 import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.Future
 import scala.util.Try
