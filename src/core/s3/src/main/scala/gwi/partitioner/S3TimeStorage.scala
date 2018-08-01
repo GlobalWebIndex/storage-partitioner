@@ -30,7 +30,7 @@ object S3TimeStorage extends LazyLogging {
 
   implicit class S3TimeStoragePimp(underlying: S3TimeStorage) {
 
-    def client(implicit s3: S3Client, mat: ActorMaterializer) = new S3TimeClient {
+    def client(implicit s3: BlobStorageClient, mat: ActorMaterializer) = new S3TimeClient {
       private val S3TimeStorage(_, source, partitioner) = underlying
 
       private val permissionError = s"s3://${source.bucket}/${source.path} has not write permissions !!!"

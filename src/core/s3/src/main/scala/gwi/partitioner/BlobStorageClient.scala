@@ -7,7 +7,7 @@ import akka.{Done, NotUsed}
 
 import scala.concurrent.Future
 
-trait S3Client {
+trait BlobStorageClient {
 
   /**
     * Checks if an Object exists

@@ -1,13 +1,13 @@
 package gwi.partitioner.gcs
 
-import gwi.partitioner.{AkkaSupport, S3Client, S3ClientSpec}
+import gwi.partitioner.{AkkaSupport, BlobStorageClient, S3ClientSpec}
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
 class AlpakkaS3ClientGcsWrapperSpec extends S3ClientSpec with AkkaSupport {
 
-  override protected[this] def s3Client: S3Client = AlpakkaGcsS3ClientWrapper()
+  override protected[this] def s3Client: BlobStorageClient = AlpakkaGcsClient()
 
   override protected[this] def bucket: String = "gwiq-storage-partitioner-test"
 
@@ -19,6 +19,6 @@ class AlpakkaS3ClientGcsWrapperSpec extends S3ClientSpec with AkkaSupport {
   }
 
   override protected[this] def ignore(name: String): Boolean = {
-    AlpakkaGcsS3ClientWrapper.credentialsPath.isEmpty
+    AlpakkaGcsClient.credentialsPath.isEmpty
   }
 }

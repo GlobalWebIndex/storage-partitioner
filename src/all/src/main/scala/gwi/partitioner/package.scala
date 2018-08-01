@@ -10,7 +10,7 @@ package object partitioner {
     import DruidTimeStorage.DruidTimeStoragePimp
     import MemoryTimeStorage.MemoryTimeStoragePimp
     import S3TimeStorage.S3TimeStoragePimp
-    def getClient(implicit s3client: S3Client, druidDriver: DruidClient, session: Session, mat: ActorMaterializer): TimeClient = underlying match {
+    def getClient(implicit s3client: BlobStorageClient, druidDriver: DruidClient, session: Session, mat: ActorMaterializer): TimeClient = underlying match {
       case s: S3TimeStorage => s.client(s3client, mat)
       case s: DruidTimeStorage => s.client(druidDriver)
       case s: MemoryTimeStorage => s.client

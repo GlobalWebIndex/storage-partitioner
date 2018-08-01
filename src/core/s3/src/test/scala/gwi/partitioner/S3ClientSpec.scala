@@ -14,7 +14,7 @@ import scala.util.Random
 trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures with AkkaSupport {
   import S3ClientSpec._
 
-  protected[this] def s3Client: S3Client
+  protected[this] def s3Client: BlobStorageClient
   protected[this] def bucket: String
 
   protected[this] def ignore(name: String): Boolean = false

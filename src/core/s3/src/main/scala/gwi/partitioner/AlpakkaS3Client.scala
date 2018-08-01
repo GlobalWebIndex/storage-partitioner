@@ -11,7 +11,7 @@ import akka.{Done, NotUsed}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 
-class AlpakkaS3Client(s3Client: akka.stream.alpakka.s3.scaladsl.S3Client) extends S3Client {
+class AlpakkaS3Client(s3Client: akka.stream.alpakka.s3.scaladsl.S3Client) extends BlobStorageClient {
 
   override def exists(bucket: String, key: String): Future[Boolean] = {
     s3Client.getObjectMetadata(bucket, key).map(_.nonEmpty)

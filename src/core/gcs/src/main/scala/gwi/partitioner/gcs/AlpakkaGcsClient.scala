@@ -10,13 +10,13 @@ import akka.stream.alpakka.googlecloud.storage.impl.GoogleCloudStorageClient
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import gwi.partitioner.{ObjectMetadata, S3Client}
+import gwi.partitioner.{ObjectMetadata, BlobStorageClient}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success}
 
-class AlpakkaGcsS3ClientWrapper(gcsClient: GoogleCloudStorageClient)(implicit materializer: Materializer) extends S3Client {
+class AlpakkaGcsClient(gcsClient: GoogleCloudStorageClient)(implicit materializer: Materializer) extends BlobStorageClient {
 
   override def exists(bucket: String, key: String): Future[Boolean] = {
     gcsClient.exists(bucket, key)
@@ -66,26 +66,26 @@ class AlpakkaGcsS3ClientWrapper(gcsClient: GoogleCloudStorageClient)(implicit ma
   }
 }
 
-object AlpakkaGcsS3ClientWrapper {
+object AlpakkaGcsClient {
 
   val googleAppCredentials = "GOOGLE_APPLICATION_CREDENTIALS"
 
   def apply(
     authConfiguration: GoogleAuthConfiguration
-  )(implicit system: ActorSystem, mat: Materializer): AlpakkaGcsS3ClientWrapper = {
-    AlpakkaGcsS3ClientWrapper(GoogleCloudStorageClient(authConfiguration))
+  )(implicit system: ActorSystem, mat: Materializer): AlpakkaGcsClient = {
+    AlpakkaGcsClient(GoogleCloudStorageClient(authConfiguration))
   }
 
   def apply(
     googleCloudStorageClient: GoogleCloudStorageClient
-  )(implicit materializer: Materializer): AlpakkaGcsS3ClientWrapper = {
-    new AlpakkaGcsS3ClientWrapper(googleCloudStorageClient)
+  )(implicit materializer: Materializer): AlpakkaGcsClient = {
+    new AlpakkaGcsClient(googleCloudStorageClient)
   }
 
-  def apply()(implicit system: ActorSystem, mat: Materializer): AlpakkaGcsS3ClientWrapper = {
+  def apply()(implicit system: ActorSystem, mat: Materializer): AlpakkaGcsClient = {
     val path = Paths.get(credentialsPath.getOrElse(throw new Exception(s"No key found in $googleAppCredentials env!")))
     val config = GoogleAuthConfiguration(path)
-    AlpakkaGcsS3ClientWrapper(config)
+    AlpakkaGcsClient(config)
   }
 
   def credentialsPath: Option[String] = sys.env.get(googleAppCredentials)
