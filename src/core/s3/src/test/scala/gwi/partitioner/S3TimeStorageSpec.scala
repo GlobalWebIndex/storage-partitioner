@@ -19,7 +19,8 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
   private[this] val source = S3Source(bucket, path, "rw", Set("version-foo"), Map.empty)
   private[this] val plainStorage = S3TimeStorage("foo", source, S3TimePartitioner.plain(Granularity.HOUR))
   private[this] val qualifiedStorage = S3TimeStorage("foo", source, S3TimePartitioner.qualified(Granularity.HOUR))
-  private[this] val partitions = plainStorage.partitioner.buildMany(new Interval(new DateTime(2016, 1, 1, 22, 0, 0, DateTimeZone.UTC), new DateTime(2016, 1, 2, 5, 0, 0, DateTimeZone.UTC))).toVector.sortBy(_.value.toString)
+  private[this] val interval = new Interval(new DateTime(2016, 1, 1, 22, 0, 0, DateTimeZone.UTC), new DateTime(2016, 1, 2, 5, 0, 0, DateTimeZone.UTC))
+  private[this] val partitions = plainStorage.partitioner.buildMany(interval).toVector.sortBy(_.value.toString)
 
   private[this] def createStorage(storage: S3TimeStorage, partitions: Iterable[TimePartition]): Unit = {
     val client = storage.client
@@ -48,7 +49,7 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
       assertResult(S3TimePartition(bucket, path, "y=2011/m=02/d=03/H=04/", new Interval("2011-02-03T04:00:00.000/2011-02-03T05:00:00.000")))(qualifiedStorage.lift(qualifiedStorage.partitioner.pathToInterval("bla/y=2011/m=02/d=03/H=04/")))
     }
     "list partitions" in {
-      whenReady(plainStorage.client.listAll) { actualPartitions =>
+      whenReady(plainStorage.client.list(interval)) { actualPartitions =>
         assertResult(partitions)(actualPartitions.sortBy(_.value.toString))
         actualPartitions.map(plainStorage.lift).map(_.partitionFileKey(S3TimeStorage.SuccessFileName)).foreach { successFileKey =>
           assertResult("version-foo\n")(Await.result(s3Client.download(bucket, successFileKey).map(_.utf8String).runWith(Sink.head), 5.seconds))
@@ -58,7 +59,7 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
     "delete partitions" in {
       plainStorage.client.delete(partitions.head)
       Thread.sleep(500)
-      whenReady(plainStorage.client.listAll) { actualPartitions =>
+      whenReady(plainStorage.client.list(interval)) { actualPartitions =>
         assertResult(partitions.tail)(actualPartitions.sortBy(_.value.toString))
       }
     }

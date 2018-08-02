@@ -10,9 +10,11 @@ import com.typesafe.scalalogging.LazyLogging
 import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 import gwi.druid.utils.Granularity
+
 import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.Future
 import scala.util.Try
+import scala.collection.breakOut
 
 case class S3Source(bucket: String, path: String, access: String, meta: Set[String], properties: Map[String,String]) extends StorageSource {
   require(path.endsWith("/"), s"By convention, s3 paths must end with delimiter otherwise the key doesn't represent a directory, $path is invalid !!!")
@@ -56,35 +58,21 @@ object S3TimeStorage extends LazyLogging {
       }
 
       def listAll: Future[Seq[TimePartition]] =
-        list(new Interval(new DateTime(2015, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))
+        list(new Interval(new DateTime(2018, 1, 1, 0, 0, 0, DateTimeZone.UTC), partitioner.granularity.truncate(new DateTime(DateTimeZone.UTC))))
 
       def list(range: Interval): Future[Seq[TimePartition]] = {
-        def timePath(time: DateTime) = partitioner.dateToPath(time).split("/").filter(_.nonEmpty)
+        val partitioner = underlying.partitioner
 
-        def isValidPartition(timePath: TimePartition) =
-          s3.exists(source.bucket, underlying.lift(timePath).partitionFileKey(SuccessFileName))
+        def getPartitions: Vector[TimePartition] =
+          partitioner.granularity.getIterable(range).map(partitioner.build)(breakOut)
 
-        val commonAncestorList =
-          timePath(range.getStart).zip(timePath(range.getEnd))
-            .takeWhile(p => p._1 == p._2)
-            .map(_._1)
+        def partitionSucceeded(partition: TimePartition) =
+          s3.exists(source.bucket, underlying.lift(partition).partitionFileKey(SuccessFileName))
 
-        val storagePrefix = s"${source.path}${commonAncestorList.mkString("/")}"
-
-        logger.info(s"Listing bucket ${source.bucket} with prefix $storagePrefix")
-
-        s3.listBucket(source.bucket, Some(storagePrefix))
-          .map(_.key.split("/").dropRight(1).takeRight(partitioner.granularity.arity).mkString("", "/", "/"))
-          .via(new ElementDeduplication(identity))
-          .map(timePath => underlying.partitioner.build(underlying.partitioner.pathToInterval(timePath)))
-          .filter( path => range.contains(path.value) )
-          .mapAsyncUnordered(64)( path => isValidPartition(path).map ( validPartition => path -> validPartition)(CachedScheduler.instance) )
-          .collect { case (path,isValid) if isValid => path }
-          .runWith(Sink.seq)
-          .map { partitions =>
-            logger.info(s"${partitions.size} partitions listed ...")
-            partitions.sortWith { case (x, y) => x.value.getStart.compareTo(y.value.getStart) < 0 }
-          }(Implicits.global)
+        Source(getPartitions)
+          .mapAsyncUnordered(32) { partition =>
+            partitionSucceeded(partition).map(succeeded => succeeded -> partition)(Implicits.global)
+          }.collect { case (succeeded, partition) if succeeded => partition }.runWith(Sink.seq)
       }
     }
   }
