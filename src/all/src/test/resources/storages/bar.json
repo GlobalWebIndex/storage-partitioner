@@ -2,9 +2,9 @@
   "id": "bar",
   "source": {
     "dataSource": "bar",
-    "coordinator": "${USER}",
-    "overlord": "${USER}",
-    "broker": "${USER}",
+    "coordinator": "${LANG}",
+    "overlord": "${LANG}",
+    "broker": "${LANG}",
     "access": "rw",
     "meta": ["version-foo"],
     "properties": {
