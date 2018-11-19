@@ -19,8 +19,6 @@ pipeline:
 
   fakes3:
     image: gwiq/fake-s3
-    ports:
-      - 4567
     commands:
       - -r /fakes3_root -p 4567
     when:
