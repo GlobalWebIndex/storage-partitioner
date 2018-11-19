@@ -48,7 +48,7 @@ trait S3ClientProvider extends AkkaSupport {
       )
     )
 
-  protected[this] val legacyClient = // still needed for creating buckets
+  protected[this] implicit lazy val legacyClient = // still needed for creating buckets
     AmazonS3ClientBuilder
       .standard()
       .withPathStyleAccessEnabled(true)
