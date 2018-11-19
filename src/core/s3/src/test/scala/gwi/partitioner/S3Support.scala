@@ -33,7 +33,7 @@ trait DockerSupport {
   }
 }
 
-sealed trait S3ClientProvider extends AkkaSupport {
+trait S3ClientProvider extends AkkaSupport {
   protected[this] val randomPort: Int = Random.nextInt(1000) + 4000
   protected[this] implicit lazy val s3Client =
     AlpakkaS3Client(
@@ -43,7 +43,7 @@ sealed trait S3ClientProvider extends AkkaSupport {
         new AWSStaticCredentialsProvider(new AnonymousAWSCredentials()),
         new DefaultAwsRegionProviderChain,
         pathStyleAccess = true,
-        endpointUrl = Some(s"http://localhost:$randomPort")
+        endpointUrl = Some(s"http://fakes3:4567")
       )
     )
 
