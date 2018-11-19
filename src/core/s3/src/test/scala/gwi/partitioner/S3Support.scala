@@ -35,7 +35,6 @@ trait DockerSupport {
 
 sealed trait S3ClientProvider extends AkkaSupport {
   protected[this] val randomPort: Int = Random.nextInt(1000) + 4000
-  protected[this] val randomName: String = s"fake-s3-$randomPort"
   protected[this] implicit lazy val s3Client =
     AlpakkaS3Client(
       new S3Settings(
@@ -44,7 +43,7 @@ sealed trait S3ClientProvider extends AkkaSupport {
         new AWSStaticCredentialsProvider(new AnonymousAWSCredentials()),
         new DefaultAwsRegionProviderChain,
         pathStyleAccess = true,
-        endpointUrl = Some(s"http://$randomName:$randomPort")
+        endpointUrl = Some(s"http://localhost:$randomPort")
       )
     )
 
@@ -52,7 +51,7 @@ sealed trait S3ClientProvider extends AkkaSupport {
     AmazonS3ClientBuilder
       .standard()
       .withPathStyleAccessEnabled(true)
-      .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(s"http://$randomName:$randomPort", "eu-west-1"))
+      .withEndpointConfiguration(new AwsClientBuilder.EndpointConfiguration(s"http://fakes3:4567", "eu-west-1"))
       .withCredentials(new AWSStaticCredentialsProvider(new AnonymousAWSCredentials()))
       .build()
 
@@ -61,6 +60,7 @@ sealed trait S3ClientProvider extends AkkaSupport {
 }
 
 trait FakeS3 extends S3ClientProvider with DockerSupport {
+  protected[this] val randomName: String = s"fake-s3-$randomPort"
 
   protected[this] def startS3(prepare: => Unit): Unit =
     startContainer("gwiq/fake-s3", randomName, Seq(PPorts.from(randomPort, randomPort)), Some(s"-r /fakes3_root -p $randomPort"))(prepare)
@@ -70,6 +70,7 @@ trait FakeS3 extends S3ClientProvider with DockerSupport {
 }
 
 trait S3DockerMock extends S3ClientProvider with DockerSupport {
+  protected[this] val randomName: String = s"s3-mock-$randomPort"
 
   protected[this] def startS3(prepare: => Unit): Unit =
     startContainer("findify/s3mock", randomName, Seq(PPorts.from(randomPort, 8001)), None)(prepare)
