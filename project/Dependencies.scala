@@ -36,7 +36,6 @@ object Dependencies {
   lazy val sprayJson                    = "io.spray"                      %%    "spray-json"                                % "1.3.4"
   lazy val monix                        = "io.monix"                      %%    "monix"                                     % "2.3.2"
   lazy val scalameter                   = "com.storm-enroute"             %%    "scalameter"                                % "0.8.2"                 % "test"
-
   lazy val nettyHandler                 = "io.netty"                      %     "netty-handler"                             % "4.1.29.Final"
   lazy val cassandraDriverNettyEpoll    = "io.netty"                      %     "netty-transport-native-epoll"              % "4.1.29.Final" classifier "linux-x86_64"
   lazy val cassandraDeps                = Seq(cassandraDriver, cassandraDriverNettyEpoll, nettyHandler)

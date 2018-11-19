@@ -1,6 +1,6 @@
 ## storage-partitioner
 
-[![Build Status](https://travis-ci.org/GlobalWebIndex/storage-partitioner.svg?branch=master)](https://travis-ci.org/GlobalWebIndex/storage-partitioner)
+[![DroneCI](https://drone.globalwebindex.net/api/badges/GlobalWebIndex/storage-partitioner/status.svg)](https://drone.globalwebindex.net/GlobalWebIndex/storage-partitioner)
 
 ```
 "net.globalwebindex" %% "storage-partitioner-all" % "x.y.z"
