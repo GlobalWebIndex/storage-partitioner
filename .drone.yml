@@ -21,7 +21,7 @@ pipeline:
     image: gwiq/fake-s3
     detach: true
     commands:
-      - -r /fakes3_root -p 4567
+      - fakes3 -r /fakes3_root -p 4567
     when:
       event: push
 
