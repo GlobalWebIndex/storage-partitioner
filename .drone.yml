@@ -23,6 +23,7 @@ pipeline:
       - /var/run/docker.sock:/var/run/docker.sock
       - /root/.docker:/root/.docker
     commands:
+      - env
       - sbt -mem 1024 -Djline.terminal=off -Dcoursier.cache=./.coursier -Dsbt.ivy.home=./.ivy2 -Dfile.encoding=utf-8 -Dsbt.gigahorse=false test
     secrets:
     - source: staging_gcs_credentials
