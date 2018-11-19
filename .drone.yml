@@ -17,8 +17,7 @@ pipeline:
     when:
       event: [push, deployment, tag]
 
-  services:
-  - name: fakes3
+  fakes3:
     image: gwiq/fake-s3
     ports:
       - 4567
