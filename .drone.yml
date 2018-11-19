@@ -19,6 +19,7 @@ pipeline:
 
   fakes3:
     image: gwiq/fake-s3
+    detach: true
     commands:
       - -r /fakes3_root -p 4567
     when:
