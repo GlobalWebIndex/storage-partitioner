@@ -37,10 +37,6 @@ class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matc
     Thread.sleep(500)
   }
 
-  override def afterAll(): Unit = try super.afterAll() finally {
-    stopS3(())
-  }
-
   "S3 time storage should" - {
     "lift path" in {
       assertResult(S3TimePartition(bucket, path, "2011/02/03/04/", new Interval("2011-02-03T04:00:00.000/2011-02-03T05:00:00.000")))(plainStorage.lift(plainStorage.partitioner.pathToInterval("bla/2011/02/03/04/")))
