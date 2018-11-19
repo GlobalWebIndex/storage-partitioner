@@ -21,7 +21,7 @@ trait DockerSupport {
 
   protected[this] def startContainer(image: String, name: String, ports: Seq[PPorts], args: Option[String] = None)(prepare: => Unit): Unit = {
     require(Process(docker(s"run --name $name ${portsToString(ports)} -d $image ${args.getOrElse("")}")).run().exitValue == 0)
-    Thread.sleep(1000)
+    Thread.sleep(3000)
     prepare
   }
 
