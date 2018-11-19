@@ -11,9 +11,10 @@ import org.scalatest.{BeforeAndAfterAll, BeforeAndAfterEach, FreeSpec, Matchers}
 import scala.concurrent.Await
 import scala.concurrent.duration._
 
-class S3TimeStorageSpec extends FreeSpec with FakeS3 with ScalaFutures with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
-
+class S3TimeStorageSpec extends FreeSpec with S3ClientProvider with ScalaFutures with Matchers with BeforeAndAfterEach with BeforeAndAfterAll {
   implicit val futurePatience = PatienceConfig(timeout = Span(5, Seconds), interval = Span(500, Millis))
+  protected[this] val dockerPort: Int = 4567
+  protected[this] val dockerHost: String = "fakes3"
   private[this] val bucket = "foo"
   private[this] val path = "bar/"
   private[this] val source = S3Source(bucket, path, "rw", Set("version-foo"), Map.empty)
