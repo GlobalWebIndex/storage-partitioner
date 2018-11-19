@@ -70,7 +70,6 @@ trait FakeS3 extends S3ClientProvider with DockerSupport {
 }
 
 trait S3DockerMock extends S3ClientProvider with DockerSupport {
-  protected[this] val randomName: String = s"s3-mock-$randomPort"
 
   protected[this] def startS3(prepare: => Unit): Unit =
     startContainer("findify/s3mock", randomName, Seq(PPorts.from(randomPort, 8001)), None)(prepare)
