@@ -13,7 +13,7 @@ resolvers in ThisBuild ++= Seq(
 version in ThisBuild ~= (_.replace('+', '-'))
 dynver in ThisBuild ~= (_.replace('+', '-'))
 cancelable in ThisBuild := true
-publish := { }
+publishArtifact in ThisBuild := false
 
 lazy val `Storage-partitioner-api` = (project in file("src/api"))
   .settings(publishSettings("GlobalWebIndex", "storage-partitioner-api", s3Resolver))

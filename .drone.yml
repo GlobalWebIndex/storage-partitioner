@@ -26,7 +26,7 @@ pipeline:
       event: push
 
   run-tests:
-    image: gwiq/sbt-docker:1.2.5
+    image: gwiq/sbt-docker:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - /root/.docker:/root/.docker
@@ -45,7 +45,7 @@ pipeline:
       event: push
 
   publish-maven-artifacts:
-    image: gwiq/sbt-docker:1.2.5
+    image: gwiq/sbt-docker:latest
     commands:
       - sbt -mem 1024 -Djline.terminal=off -Dcoursier.cache=./.coursier -Dsbt.ivy.home=./.ivy2 -Dfile.encoding=utf-8 publish
     secrets:

@@ -3,7 +3,7 @@ import sbt._
 object Dependencies {
 
 
-  val druid4sVersion                    = "0.3.6"
+  val druid4sVersion                    = "0.3.7"
   val akkaVersion                       = "2.5.16"
   val alpakkaVersion                    = "0.16-gcs.2" // unmerged branch, we should do something about it soon as we depend on an old branch
   val jacksonVersion                    = "2.9.2"
