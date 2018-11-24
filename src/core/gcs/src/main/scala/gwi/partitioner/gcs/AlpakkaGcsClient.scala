@@ -68,7 +68,7 @@ class AlpakkaGcsClient(gcsClient: GoogleCloudStorageClient)(implicit materialize
 
 object AlpakkaGcsClient {
 
-  val googleAppCredentials = "GOOGLE_APPLICATION_CREDENTIALS"
+  val googleAppCredentialsPath = "GOOGLE_APPLICATION_CREDENTIALS_PATH"
 
   def apply(
     authConfiguration: GoogleAuthConfiguration
@@ -83,10 +83,10 @@ object AlpakkaGcsClient {
   }
 
   def apply()(implicit system: ActorSystem, mat: Materializer): AlpakkaGcsClient = {
-    val path = Paths.get(credentialsPath.getOrElse(throw new Exception(s"No key found in $googleAppCredentials env!")))
+    val path = Paths.get(credentialsPath.getOrElse(throw new Exception(s"No key found in $googleAppCredentialsPath env!")))
     val config = GoogleAuthConfiguration(path)
     AlpakkaGcsClient(config)
   }
 
-  def credentialsPath: Option[String] = sys.env.get(googleAppCredentials)
+  def credentialsPath: Option[String] = sys.env.get(googleAppCredentialsPath)
 }
