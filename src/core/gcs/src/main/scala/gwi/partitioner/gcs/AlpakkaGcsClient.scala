@@ -72,15 +72,19 @@ object AlpakkaGcsClient {
   val googleAppCredentials      = "GOOGLE_APPLICATION_CREDENTIALS"
   val googleAppCredentialsPath  = "GOOGLE_APPLICATION_CREDENTIALS_PATH"
 
-  private[this] def getGoogleAuthConfFromEnvVar = {
-    sys.env.get(googleAppCredentials).map { credentials =>
-      val tempFile = File.createTempFile("cread-", ".json")
-      try {
-        Files.write(tempFile.toPath, credentials.getBytes, StandardOpenOption.WRITE)
-        GoogleAuthConfiguration(tempFile.toPath)
-      } finally tempFile.delete()
-    }
-  }
+  def getGoogleAuthConf: GoogleAuthConfiguration =
+    credentialsPath
+      .filter(Paths.get(_).toFile.exists())
+      .map( path => GoogleAuthConfiguration(Paths.get(path)))
+      .getOrElse {
+        sys.env.get(googleAppCredentials).map { credentials =>
+          val tempFile = File.createTempFile("cread-", ".json")
+          try {
+            Files.write(tempFile.toPath, credentials.getBytes, StandardOpenOption.WRITE)
+            GoogleAuthConfiguration(tempFile.toPath)
+          } finally tempFile.delete()
+        }.getOrElse(throw new Exception(s"No key found in $googleAppCredentialsPath env and no $googleAppCredentials env var exported !"))
+      }
 
   def apply(
     authConfiguration: GoogleAuthConfiguration
@@ -95,14 +99,7 @@ object AlpakkaGcsClient {
   }
 
   def apply()(implicit system: ActorSystem, mat: Materializer): AlpakkaGcsClient =
-    AlpakkaGcsClient(
-      credentialsPath
-        .filter(Paths.get(_).toFile.exists())
-        .map( path => GoogleAuthConfiguration(Paths.get(path)))
-        .getOrElse(
-          getGoogleAuthConfFromEnvVar.getOrElse(throw new Exception(s"No key found in $googleAppCredentialsPath env and no $googleAppCredentials env var exported !"))
-        )
-    )
+    AlpakkaGcsClient(getGoogleAuthConf)
 
   def credentialsPath: Option[String] = sys.env.get(googleAppCredentialsPath)
 }
