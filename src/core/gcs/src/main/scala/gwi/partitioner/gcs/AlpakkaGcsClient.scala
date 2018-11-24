@@ -1,6 +1,7 @@
 package gwi.partitioner.gcs
 
-import java.nio.file.Paths
+import java.io.File
+import java.nio.file.{Files, Paths, StandardOpenOption}
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentType, ContentTypes}
@@ -10,7 +11,7 @@ import akka.stream.alpakka.googlecloud.storage.impl.GoogleCloudStorageClient
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import akka.{Done, NotUsed}
-import gwi.partitioner.{ObjectMetadata, BlobStorageClient}
+import gwi.partitioner.{BlobStorageClient, ObjectMetadata}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -68,7 +69,18 @@ class AlpakkaGcsClient(gcsClient: GoogleCloudStorageClient)(implicit materialize
 
 object AlpakkaGcsClient {
 
-  val googleAppCredentialsPath = "GOOGLE_APPLICATION_CREDENTIALS_PATH"
+  val googleAppCredentials      = "GOOGLE_APPLICATION_CREDENTIALS"
+  val googleAppCredentialsPath  = "GOOGLE_APPLICATION_CREDENTIALS_PATH"
+
+  private[this] def getGoogleAuthConfFromEnvVar = {
+    sys.env.get(googleAppCredentials).map { credentials =>
+      val tempFile = File.createTempFile("cread-", ".json")
+      try {
+        Files.write(tempFile.toPath, credentials.getBytes, StandardOpenOption.WRITE)
+        GoogleAuthConfiguration(tempFile.toPath)
+      } finally tempFile.delete()
+    }
+  }
 
   def apply(
     authConfiguration: GoogleAuthConfiguration
@@ -82,11 +94,15 @@ object AlpakkaGcsClient {
     new AlpakkaGcsClient(googleCloudStorageClient)
   }
 
-  def apply()(implicit system: ActorSystem, mat: Materializer): AlpakkaGcsClient = {
-    val path = Paths.get(credentialsPath.getOrElse(throw new Exception(s"No key found in $googleAppCredentialsPath env!")))
-    val config = GoogleAuthConfiguration(path)
-    AlpakkaGcsClient(config)
-  }
+  def apply()(implicit system: ActorSystem, mat: Materializer): AlpakkaGcsClient =
+    AlpakkaGcsClient(
+      credentialsPath
+        .filter(Paths.get(_).toFile.exists())
+        .map( path => GoogleAuthConfiguration(Paths.get(path)))
+        .getOrElse(
+          getGoogleAuthConfFromEnvVar.getOrElse(throw new Exception(s"No key found in $googleAppCredentialsPath env and no $googleAppCredentials env var exported !"))
+        )
+    )
 
   def credentialsPath: Option[String] = sys.env.get(googleAppCredentialsPath)
 }
