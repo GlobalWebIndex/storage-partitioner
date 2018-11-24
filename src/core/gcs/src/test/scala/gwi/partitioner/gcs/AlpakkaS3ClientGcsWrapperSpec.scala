@@ -19,6 +19,6 @@ class AlpakkaS3ClientGcsWrapperSpec extends S3ClientSpec with AkkaSupport {
   }
 
   override protected[this] def ignore(name: String): Boolean = {
-    AlpakkaGcsClient.credentialsPath.isEmpty
+    sys.env.get(GoogleAuth.googleAppCredentialsPath).isEmpty
   }
 }
