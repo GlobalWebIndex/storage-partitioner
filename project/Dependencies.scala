@@ -5,7 +5,7 @@ object Dependencies {
 
   val druid4sVersion                    = "0.3.9"
   val akkaVersion                       = "2.5.16"
-  val alpakkaVersion                    = "0.16-gcs.2" // unmerged branch, we should do something about it soon as we depend on an old branch
+  val alpakkaVersion                    = "0.20"
   val jacksonVersion                    = "2.9.2"
 
   lazy val druid4sUtils                 = "net.globalwebindex"            %%    "druid4s-utils"                             % druid4sVersion
@@ -19,7 +19,7 @@ object Dependencies {
 
   /** ALPAKKAA */
 
-  lazy val alpakkaGCS                   = "com.lightbend.akka"            %%    "akka-stream-alpakka-google-cloud-storage"  % alpakkaVersion
+  lazy val alpakkaGCS                   = "net.globalwebindex"            %%    "akka-stream-alpakka-google-cloud-storage"  % "0.16-gcs.2" // unmerged branch, we should do something about it soon as we depend on an old branch
   lazy val alpakkaS3                    = "com.lightbend.akka"            %%    "akka-stream-alpakka-s3"                    % alpakkaVersion
   lazy val alpakkaCassandra             = "com.lightbend.akka"            %%    "akka-stream-alpakka-cassandra"             % alpakkaVersion
 
