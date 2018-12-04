@@ -16,15 +16,6 @@
 "net.globalwebindex" %% "storage-partitioner-cql" % "x.y.z"
 "net.globalwebindex" %% "storage-partitioner-druid" % "x.y.z"
 ```
-or
-```
-dependsOn(ProjectRef(uri("https://github.com/GlobalWebIndex/storage-partitioner.git#vx.y.x"), "storage-partitioner-api"))
-dependsOn(ProjectRef(uri("https://github.com/GlobalWebIndex/storage-partitioner.git#vx.y.x"), "storage-partitioner-all"))
-dependsOn(ProjectRef(uri("https://github.com/GlobalWebIndex/storage-partitioner.git#vx.y.x"), "storage-partitioner-s3"))
-dependsOn(ProjectRef(uri("https://github.com/GlobalWebIndex/storage-partitioner.git#vx.y.x"), "storage-partitioner-gcs"))
-dependsOn(ProjectRef(uri("https://github.com/GlobalWebIndex/storage-partitioner.git#vx.y.x"), "storage-partitioner-cql"))
-dependsOn(ProjectRef(uri("https://github.com/GlobalWebIndex/storage-partitioner.git#vx.y.x"), "storage-partitioner-druid"))
-```
 
 This project targets primarily storages like FS, S3, FTP, etc., that :
   - do not have any kind of built-in partitioning like databases do
