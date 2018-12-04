@@ -15,6 +15,7 @@ version in ThisBuild ~= (_.replace('+', '-'))
 dynver in ThisBuild ~= (_.replace('+', '-'))
 cancelable in ThisBuild := true
 publishArtifact in ThisBuild := false
+publish in ThisBuild := {}
 
 lazy val `storage-partitioner-api` = (project in file("src/api"))
   .settings(bintraySettings("GlobalWebIndex", "storage-partitioner-api"))
