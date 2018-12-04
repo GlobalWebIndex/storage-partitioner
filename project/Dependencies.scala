@@ -4,7 +4,7 @@ object Dependencies {
 
 
   val druid4sVersion                    = "0.3.9"
-  val akkaVersion                       = "2.5.16"
+  val akkaVersion                       = "2.5.18"
   val alpakkaVersion                    = "0.20"
   val jacksonVersion                    = "2.9.2"
 
