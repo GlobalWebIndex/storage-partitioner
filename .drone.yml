@@ -32,6 +32,8 @@ pipeline:
       - /root/.docker:/root/.docker
     commands:
       - sbt -mem 1024 -Djline.terminal=off -Dcoursier.cache=./.coursier -Dsbt.ivy.home=./.ivy2 -Dfile.encoding=utf-8 -Dsbt.gigahorse=false test
+    environment:
+      - COURSIER_TTL=30d
     secrets:
     - source: staging_gcs_credentials
       target: google_application_credentials
@@ -48,6 +50,8 @@ pipeline:
     image: gwiq/sbt-docker:latest
     commands:
       - sbt -mem 1024 -Djline.terminal=off -Dcoursier.cache=./.coursier -Dsbt.ivy.home=./.ivy2 -Dfile.encoding=utf-8 publish
+    environment:
+      - COURSIER_TTL=30d
     secrets:
       - source: bintray_user
         target: bintray_user
