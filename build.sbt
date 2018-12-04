@@ -1,21 +1,21 @@
 import Dependencies._
 import Deploy._
 
-lazy val s3Resolver = "S3 Snapshots" at "s3://public.maven.globalwebindex.net.s3-eu-west-1.amazonaws.com/snapshots"
-
 crossScalaVersions in ThisBuild := Seq("2.12.6", "2.11.8")
 organization in ThisBuild := "net.globalwebindex"
 libraryDependencies in ThisBuild ++= Seq(monix, akkaSlf4j, akkaActor, akkaStream, scalatest, scalameter, loggingImplLogback % "test") ++ jodaTime ++ loggingApi
 resolvers in ThisBuild ++= Seq(
   "Maven Central Google Mirror EU" at "https://maven-central-eu.storage-download.googleapis.com/repos/central/data/",
   Resolver.bintrayRepo("l15k4", "GlobalWebIndex"),
-  s3Resolver
+  "S3 Snapshots" at "s3://public.maven.globalwebindex.net.s3-eu-west-1.amazonaws.com/snapshots"
 )
 version in ThisBuild ~= (_.replace('+', '-'))
 dynver in ThisBuild ~= (_.replace('+', '-'))
 cancelable in ThisBuild := true
 publishArtifact in ThisBuild := false
 publish in ThisBuild := {}
+
+lazy val root = (project in file(".")).settings(skip in publish := true)
 
 lazy val `storage-partitioner-api` = (project in file("src/api"))
   .settings(bintraySettings("GlobalWebIndex", "storage-partitioner-api"))
