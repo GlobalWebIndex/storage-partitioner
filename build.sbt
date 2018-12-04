@@ -8,6 +8,7 @@ organization in ThisBuild := "net.globalwebindex"
 libraryDependencies in ThisBuild ++= Seq(monix, akkaSlf4j, akkaActor, akkaStream, scalatest, scalameter, loggingImplLogback % "test") ++ jodaTime ++ loggingApi
 resolvers in ThisBuild ++= Seq(
   "Maven Central Google Mirror EU" at "https://maven-central-eu.storage-download.googleapis.com/repos/central/data/",
+  Resolver.bintrayRepo("l15k4", "GlobalWebIndex"),
   s3Resolver
 )
 version in ThisBuild ~= (_.replace('+', '-'))
@@ -15,40 +16,40 @@ dynver in ThisBuild ~= (_.replace('+', '-'))
 cancelable in ThisBuild := true
 publishArtifact in ThisBuild := false
 
-lazy val `Storage-partitioner-api` = (project in file("src/api"))
-  .settings(publishSettings("GlobalWebIndex", "storage-partitioner-api", s3Resolver))
+lazy val `storage-partitioner-api` = (project in file("src/api"))
+  .settings(bintraySettings("GlobalWebIndex", "storage-partitioner-api"))
   .settings(libraryDependencies += druid4sUtils)
 
-lazy val `Storage-partitioner-s3` = (project in file("src/core/s3"))
+lazy val `storage-partitioner-s3` = (project in file("src/core/s3"))
   .settings(libraryDependencies ++= Seq(alpakkaS3, s3mock, awsS3 % "test"))
-  .settings(publishSettings("GlobalWebIndex", "storage-partitioner-s3", s3Resolver))
-  .dependsOn(`Storage-partitioner-api` % "compile->compile;test->test")
+  .settings(bintraySettings("GlobalWebIndex", "storage-partitioner-s3"))
+  .dependsOn(`storage-partitioner-api` % "compile->compile;test->test")
 
-lazy val `Storage-partitioner-cql` = (project in file("src/core/cql"))
+lazy val `storage-partitioner-cql` = (project in file("src/core/cql"))
   .settings(libraryDependencies ++= cassandraDeps :+ alpakkaCassandra)
-  .settings(publishSettings("GlobalWebIndex", "storage-partitioner-cql", s3Resolver))
-  .dependsOn(`Storage-partitioner-api` % "compile->compile;test->test")
+  .settings(bintraySettings("GlobalWebIndex", "storage-partitioner-cql"))
+  .dependsOn(`storage-partitioner-api` % "compile->compile;test->test")
 
-lazy val `Storage-partitioner-druid` = (project in file("src/core/druid"))
-  .dependsOn(`Storage-partitioner-api` % "compile->compile;test->test")
-  .settings(publishSettings("GlobalWebIndex", "storage-partitioner-druid", s3Resolver))
+lazy val `storage-partitioner-druid` = (project in file("src/core/druid"))
+  .dependsOn(`storage-partitioner-api` % "compile->compile;test->test")
+  .settings(bintraySettings("GlobalWebIndex", "storage-partitioner-druid"))
   .settings(libraryDependencies += druid4sClient)
 
-lazy val `Storage-partitioner-gcs` = (project in file("src/core/gcs"))
+lazy val `storage-partitioner-gcs` = (project in file("src/core/gcs"))
   .settings(libraryDependencies ++= Seq(alpakkaGCS))
-  .settings(publishSettings("GlobalWebIndex", "storage-partitioner-gcs", s3Resolver))
+  .settings(bintraySettings("GlobalWebIndex", "storage-partitioner-gcs"))
   .dependsOn(
-    `Storage-partitioner-s3` % "compile->compile;test->test",
-    `Storage-partitioner-api` % "compile->compile;test->test"
+    `storage-partitioner-s3` % "compile->compile;test->test",
+    `storage-partitioner-api` % "compile->compile;test->test"
   )
 
-lazy val `Storage-partitioner-all` = (project in file("src/all"))
+lazy val `storage-partitioner-all` = (project in file("src/all"))
   .settings(libraryDependencies += sprayJson)
-  .settings(publishSettings("GlobalWebIndex", "storage-partitioner", s3Resolver))
+  .settings(bintraySettings("GlobalWebIndex", "storage-partitioner"))
   .dependsOn(
-    `Storage-partitioner-api` % "compile->compile;test->test",
-    `Storage-partitioner-s3` % "compile->compile;test->test",
-    `Storage-partitioner-druid` % "compile->compile;test->test",
-    `Storage-partitioner-cql` % "compile->compile;test->test",
-    `Storage-partitioner-gcs` % "compile->compile;test->test"
+    `storage-partitioner-api` % "compile->compile;test->test",
+    `storage-partitioner-s3` % "compile->compile;test->test",
+    `storage-partitioner-druid` % "compile->compile;test->test",
+    `storage-partitioner-cql` % "compile->compile;test->test",
+    `storage-partitioner-gcs` % "compile->compile;test->test"
   )
