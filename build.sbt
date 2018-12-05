@@ -16,6 +16,7 @@ publishArtifact in ThisBuild := false
 lazy val root = (project in file("."))
   .aggregate(`storage-partitioner-api`, `storage-partitioner-s3`, `storage-partitioner-cql`, `storage-partitioner-druid`, `storage-partitioner-gcs`, `storage-partitioner-gcs`, `storage-partitioner-all`)
   .settings(skip in publish := true)
+  .settings(skip in update := true)
 
 lazy val `storage-partitioner-api` = (project in file("src/api"))
   .settings(bintraySettings("GlobalWebIndex", "storage-partitioner"))
