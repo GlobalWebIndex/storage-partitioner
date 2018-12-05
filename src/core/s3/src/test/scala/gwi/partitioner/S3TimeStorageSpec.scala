@@ -1,7 +1,5 @@
 package gwi.partitioner
 
-import java.util.TimeZone
-
 import akka.stream.scaladsl.{Sink, Source}
 import akka.util.ByteString
 import gwi.druid.utils.Granularity
@@ -62,10 +60,4 @@ class S3TimeStorageSpec extends FreeSpec with S3ClientProvider with ScalaFutures
     }
   }
 
-}
-
-object S3TimeStorageSpec {
-  System.setProperty("user.timezone", "UTC")
-  TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
-  DateTimeZone.setDefault(DateTimeZone.UTC)
 }

@@ -1,3 +1,5 @@
+import java.util.TimeZone
+
 import Dependencies._
 import Deploy._
 
@@ -12,6 +14,10 @@ version in ThisBuild ~= (_.replace('+', '-'))
 dynver in ThisBuild ~= (_.replace('+', '-'))
 cancelable in ThisBuild := true
 publishArtifact in ThisBuild := false
+
+testOptions in (ThisBuild, Test) ++= Seq(
+  Tests.Setup { () => TimeZone.setDefault(TimeZone.getTimeZone("UTC")) }
+)
 
 lazy val root = (project in file("."))
   .aggregate(`storage-partitioner-api`, `storage-partitioner-s3`, `storage-partitioner-cql`, `storage-partitioner-druid`, `storage-partitioner-gcs`, `storage-partitioner-gcs`, `storage-partitioner-all`)
