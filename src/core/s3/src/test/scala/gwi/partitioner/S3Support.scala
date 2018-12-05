@@ -1,5 +1,6 @@
 package gwi.partitioner
 
+import akka.stream.alpakka.s3.impl.ListBucketVersion2
 import akka.stream.alpakka.s3.{MemoryBufferType, S3Settings}
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, AnonymousAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder
@@ -44,7 +45,8 @@ trait S3ClientProvider extends AkkaSupport {
         new AWSStaticCredentialsProvider(new AnonymousAWSCredentials()),
         new DefaultAwsRegionProviderChain,
         pathStyleAccess = true,
-        endpointUrl = Some(s"http://$dockerHost:$dockerPort")
+        endpointUrl = Some(s"http://$dockerHost:$dockerPort"),
+        ListBucketVersion2.getInstance
       )
     )
 
