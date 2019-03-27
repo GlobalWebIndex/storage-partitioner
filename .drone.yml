@@ -6,17 +6,6 @@ clone:
 
 pipeline:
 
-  restore-cache:
-    image: drillster/drone-volume-cache
-    restore: true
-    mount:
-      - ./.ivy2
-      - ./.coursier
-    volumes:
-      - /tmp/cache:/cache
-    when:
-      event: [push, deployment, tag]
-
   fakes3:
     image: gwiq/fake-s3
     detach: true
@@ -27,28 +16,20 @@ pipeline:
 
   run-tests:
     image: gwiq/sbt-docker:latest
+    volumes:
+      - /var/lib/docker/sbt:/cache
     commands:
-      - sbt -mem 1024 -Djline.terminal=off -Dcoursier.cache=./.coursier -Dsbt.ivy.home=./.ivy2 -Dfile.encoding=utf-8 -Dsbt.gigahorse=false test
+      - sbt -mem 1024 -Djline.terminal=off -Dcoursier.cache=/cache/.coursier -Dsbt.ivy.home=/cache/.ivy2 -Divy.home=/cache/.ivy2 -Dfile.encoding=utf-8 -Dsbt.gigahorse=false test
     secrets: [ google_application_credentials, aws_access_key_id, aws_secret_access_key, aws_region ]
     when:
       event: push
 
   publish-maven-artifacts:
     image: gwiq/sbt-docker:latest
+    volumes:
+      - /var/lib/docker/sbt:/cache
     commands:
-      - sbt -mem 1024 -Djline.terminal=off -Dcoursier.cache=./.coursier -Dsbt.ivy.home=./.ivy2 -Dfile.encoding=utf-8 publish
+      - sbt -mem 1024 -Djline.terminal=off -Dcoursier.cache=/cache/.coursier -Dsbt.ivy.home=/cache/.ivy2 -Divy.home=/cache/.ivy2 -Dfile.encoding=utf-8 publish
     secrets: [ bintray_user, bintray_pass, aws_access_key_id, aws_secret_access_key, aws_region ]
     when:
       event: [deployment, tag]
-
-  rebuild-cache:
-    image: drillster/drone-volume-cache
-    rebuild: true
-    mount:
-      - ./.ivy2
-      - ./.coursier
-    volumes:
-      - /tmp/cache:/cache
-    when:
-      event: [push, deployment, tag]
-      status: [ failure, success ]
