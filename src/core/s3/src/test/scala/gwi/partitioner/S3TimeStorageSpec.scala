@@ -53,7 +53,7 @@ class S3TimeStorageSpec extends FreeSpec with S3ClientProvider with ScalaFutures
     }
     "delete partitions" in {
       plainStorage.client.delete(partitions.head)
-      Thread.sleep(500)
+      Thread.sleep(1000)
       whenReady(plainStorage.client.list(interval)) { actualPartitions =>
         assertResult(partitions.tail)(actualPartitions.sortBy(_.value.toString))
       }

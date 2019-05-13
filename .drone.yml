@@ -18,9 +18,12 @@ pipeline:
     image: gwiq/sbt-docker:latest
     volumes:
       - /var/lib/docker/sbt:/cache
+    secrets: [ test_credentials, aws_access_key_id, aws_secret_access_key, aws_region ]
+    environment:
+      - GOOGLE_APPLICATION_CREDENTIALS=/tmp/key.json
     commands:
+      - echo $TEST_CREDENTIALS | base64 -d > $GOOGLE_APPLICATION_CREDENTIALS
       - sbt -mem 1024 -Djline.terminal=off -Dcoursier.cache=/cache/.coursier -Dsbt.ivy.home=/cache/.ivy2 -Divy.home=/cache/.ivy2 -Dfile.encoding=utf-8 -Dsbt.gigahorse=false test
-    secrets: [ google_application_credentials, aws_access_key_id, aws_secret_access_key, aws_region ]
     when:
       event: push
 
