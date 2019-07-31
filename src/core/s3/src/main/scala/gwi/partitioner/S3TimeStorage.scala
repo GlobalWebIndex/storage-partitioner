@@ -11,7 +11,6 @@ import org.joda.time.format.DateTimeFormat
 import org.joda.time.{DateTime, DateTimeZone, Interval}
 import gwi.druid.utils.Granularity
 
-import scala.concurrent.ExecutionContext.Implicits
 import scala.concurrent.Future
 import scala.util.Try
 import scala.collection.breakOut
@@ -43,18 +42,18 @@ object S3TimeStorage extends LazyLogging {
           Future.failed(new IllegalArgumentException(permissionError))
         else
           s3.listBucket(source.bucket, Some(underlying.lift(partition.value).partitionKey))
-          .mapAsync(16) ( result => s3.deleteObject(source.bucket, result.key) )
+          .flatMapMerge(16,  result => s3.deleteObject(source.bucket, result.key) )
           .runWith(Sink.ignore)
 
       def indexData(partition: TimePartition, fileName: String, data: Source[ByteString, _], dataLength: Long): Future[Done] = {
         require(hasPermissions, permissionError)
-        s3.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(fileName), data, dataLength)
+        s3.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(fileName), data, dataLength).runWith(Sink.head)
       }
 
       def markWithSuccess(partition: TimePartition): Future[Done] = {
         val content = source.meta.mkString("","\n","\n")
         s3.putObject(source.bucket, underlying.lift(partition.value).partitionFileKey(SuccessFileName), Source.single(ByteString(content)), content.length)
-          .map(_ => Done)(Implicits.global)
+          .map(_ => Done).runWith(Sink.head)
       }
 
       def listAll: Future[Seq[TimePartition]] =
@@ -70,9 +69,9 @@ object S3TimeStorage extends LazyLogging {
           s3.exists(source.bucket, underlying.lift(partition).partitionFileKey(SuccessFileName))
 
         Source(getPartitions)
-          .mapAsyncUnordered(32) { partition =>
-            partitionSucceeded(partition).map(succeeded => succeeded -> partition)(Implicits.global)
-          }.collect { case (succeeded, partition) if succeeded => partition }.runWith(Sink.seq)
+          .flatMapMerge(32, partition =>
+            partitionSucceeded(partition).map(succeeded => succeeded -> partition)
+          ).collect { case (succeeded, partition) if succeeded => partition }.runWith(Sink.seq)
       }
     }
   }

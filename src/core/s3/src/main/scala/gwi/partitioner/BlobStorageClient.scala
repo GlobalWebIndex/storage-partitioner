@@ -16,7 +16,7 @@ trait BlobStorageClient {
     * @param key the object key
     * @return A [[Future]] containing a false in case the object does not exist
     */
-  def exists(bucket: String, key: String): Future[Boolean]
+  def exists(bucket: String, key: String): Source[Boolean, NotUsed]
 
   /**
     * Deletes an Object
@@ -25,7 +25,7 @@ trait BlobStorageClient {
     * @param key the object key
     * @return A [[Future]] of [[Done]]
     */
-  def deleteObject(bucket: String, key: String): Future[Done]
+  def deleteObject(bucket: String, key: String): Source[Boolean, NotUsed]
 
   /**
     * Uploads an Object, use this for small files and [[ObjectMetadata]] for bigger ones
@@ -39,7 +39,7 @@ trait BlobStorageClient {
   def putObject(bucket: String,
     key: String,
     data: Source[ByteString, _],
-    contentLength: Long): Future[Done]
+    contentLength: Long): Source[Done, NotUsed]
 
   /**
     * Downloads an Object
@@ -48,7 +48,7 @@ trait BlobStorageClient {
     * @param key the object key
     * @return A [[Source]] of [[ByteString]], and a [[Future]] containing the [[ObjectMetadata]]
     */
-  def download(bucket: String, key: String): Source[ByteString, NotUsed]
+  def download(bucket: String, key: String): Source[Option[Source[ByteString, NotUsed]], NotUsed]
 
   /**
     * Will return a source of object metadata for a given bucket with optional prefix.

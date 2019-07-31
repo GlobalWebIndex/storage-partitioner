@@ -1,6 +1,6 @@
 package gwi.partitioner
 
-import akka.stream.scaladsl.{Compression, Source}
+import akka.stream.scaladsl.{Compression, Sink, Source}
 import akka.util.ByteString
 import org.scalactic.source.Position
 import org.scalatest.concurrent.ScalaFutures
@@ -26,22 +26,22 @@ trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures with AkkaSup
     "check if an object exists" inIgnorable {
       val res = for {
         f <- uploadFile()
-        exists <- s3Client.exists(bucket, f.name)
+        exists <- s3Client.exists(bucket, f.name).runWith(Sink.head)
       } yield exists
 
       res.futureValue shouldBe true
     }
 
     "check if an object doesn't exist" inIgnorable {
-      val res = s3Client.exists(bucket, "not-exists")
+      val res = s3Client.exists(bucket, "not-exists").runWith(Sink.head)
       res.futureValue shouldBe false
     }
 
     "delete an object" inIgnorable {
       val res = for {
         f <- uploadFile()
-        _ <- s3Client.deleteObject(bucket, f.name)
-        exists <- s3Client.exists(bucket, f.name)
+        _ <- s3Client.deleteObject(bucket, f.name).runWith(Sink.head)
+        exists <- s3Client.exists(bucket, f.name).runWith(Sink.head)
       } yield exists
 
       res.futureValue shouldBe false
@@ -50,8 +50,8 @@ trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures with AkkaSup
     "put an object" inIgnorable {
       val f = genFile()
       val res = for {
-        _ <- s3Client.putObject(bucket, f.name, Source.single(f.content), f.content.size)
-        exists <- s3Client.exists(bucket, f.name)
+        _ <- s3Client.putObject(bucket, f.name, Source.single(f.content), f.content.size).runWith(Sink.head)
+        exists <- s3Client.exists(bucket, f.name).runWith(Sink.head)
       } yield exists
 
       res.futureValue shouldBe true
@@ -60,7 +60,7 @@ trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures with AkkaSup
     "download an object" inIgnorable {
       val res = for {
         uploaded <- uploadFile()
-        downloaded <- s3Client.download(bucket, uploaded.name).runFold(ByteString.empty)(_ ++ _)
+        downloaded <- s3Client.download(bucket, uploaded.name).map(_.get.runFold(ByteString.empty)(_ ++ _)).runWith(Sink.head)
       } yield (uploaded, downloaded)
 
       val (uploaded, downloaded) = res.futureValue
@@ -84,9 +84,7 @@ trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures with AkkaSup
         _ <- Source.single(f.content)
           .via(Compression.gzip)
           .runWith(s3Client.multipartUpload(bucket, f.name))
-        downloaded <- s3Client.download(bucket, f.name)
-          .via(Compression.gunzip())
-          .runFold(ByteString.empty)(_ ++ _)
+        downloaded <- s3Client.download(bucket, f.name).map(_.get.via(Compression.gunzip()).runFold(ByteString.empty)(_ ++ _)).runWith(Sink.head)
       } yield downloaded
 
       res.futureValue shouldEqual f.content
@@ -96,7 +94,7 @@ trait S3ClientSpec extends FreeSpec with Matchers with ScalaFutures with AkkaSup
   protected[this] def uploadFile(): Future[File] = {
     val f = genFile()
     s3Client.putObject(bucket, f.name, Source.single(f.content), f.content.size)
-      .map(_ => f)
+      .map(_ => f).runWith(Sink.head)
   }
 
   protected[this] def genFile(): File = {

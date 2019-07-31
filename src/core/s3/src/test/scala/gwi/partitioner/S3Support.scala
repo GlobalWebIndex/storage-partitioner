@@ -1,10 +1,7 @@
 package gwi.partitioner
 
-import akka.stream.alpakka.s3.impl.ListBucketVersion2
-import akka.stream.alpakka.s3.{MemoryBufferType, S3Settings}
 import com.amazonaws.auth.{AWSStaticCredentialsProvider, AnonymousAWSCredentials}
 import com.amazonaws.client.builder.AwsClientBuilder
-import com.amazonaws.regions.DefaultAwsRegionProviderChain
 import com.amazonaws.services.s3.AmazonS3ClientBuilder
 
 import scala.sys.process.Process
@@ -37,18 +34,7 @@ trait DockerSupport {
 trait S3ClientProvider extends AkkaSupport {
   protected[this] val dockerPort: Int
   protected[this] val dockerHost: String
-  protected[this] implicit lazy val s3Client =
-    AlpakkaS3Client(
-      new S3Settings(
-        MemoryBufferType,
-        proxy = None,
-        new AWSStaticCredentialsProvider(new AnonymousAWSCredentials()),
-        new DefaultAwsRegionProviderChain,
-        pathStyleAccess = true,
-        endpointUrl = Some(s"http://$dockerHost:$dockerPort"),
-        ListBucketVersion2.getInstance
-      )
-    )
+  protected[this] implicit lazy val s3Client = AlpakkaS3Client
 
   protected[this] implicit lazy val legacyClient = // still needed for creating buckets
     AmazonS3ClientBuilder
