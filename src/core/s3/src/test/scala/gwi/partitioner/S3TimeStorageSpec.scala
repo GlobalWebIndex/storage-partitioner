@@ -47,7 +47,7 @@ class S3TimeStorageSpec extends FreeSpec with S3ClientProvider with ScalaFutures
       whenReady(plainStorage.client.list(interval)) { actualPartitions =>
         assertResult(partitions)(actualPartitions.sortBy(_.value.toString))
         actualPartitions.map(plainStorage.lift).map(_.partitionFileKey(S3TimeStorage.SuccessFileName)).foreach { successFileKey =>
-          assertResult("version-foo\n")(Await.result(s3Client.download(bucket, successFileKey).map(_.utf8String).runWith(Sink.head), 5.seconds))
+          assertResult("version-foo\n")(Await.result(AlpakkaS3Client.download(bucket, successFileKey).map(_.get.map(_.utf8String).runWith(Sink.head)).runWith(Sink.head), 5.seconds))
         }
       }
     }
