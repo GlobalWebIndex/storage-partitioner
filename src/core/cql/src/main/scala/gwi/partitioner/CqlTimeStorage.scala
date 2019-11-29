@@ -33,8 +33,12 @@ object CqlTimeStorage {
     }
   }
 
+  trait CqlTimeClient extends TimeClient {
+    def listMissing(range: Interval): Future[Seq[TimePartition]]
+  }
+
   implicit class CqlTimeStoragePimp(underlying: CqlTimeStorage) {
-    def client(implicit session: Session, mat: ActorMaterializer) = new TimeClient {
+    def client(implicit session: Session, mat: ActorMaterializer): CqlTimeClient = new CqlTimeClient {
       private val CqlTimeStorage(_, source, partitioner) = underlying
 
       private val tag = source.tag
